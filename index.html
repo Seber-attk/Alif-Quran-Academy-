@@ -656,7 +656,7 @@
       onAuthStateChanged, signOut, updateProfile
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
-      getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, onSnapshot
+      getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, onSnapshot, increment, arrayUnion
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -679,7 +679,7 @@
     const db = getFirestore(firebaseApp);
 
     window.__fb = {
-      auth, db, doc, getDoc, setDoc, deleteDoc, collection, getDocs, onSnapshot,
+      auth, db, doc, getDoc, setDoc, deleteDoc, collection, getDocs, onSnapshot, increment, arrayUnion,
       createUserWithEmailAndPassword, signInWithEmailAndPassword,
       onAuthStateChanged, signOut, updateProfile, ADMIN_EMAILS, TEACHER_EMAILS
     };
@@ -721,6 +721,7 @@
     let currentQuestionIdx = 0;
     let lessonScore = 0;
     let lessonXPEarned = 0;
+    let isFinishingLesson = false;
     let activeAudio = null;
     let authMode = 'login';
 
@@ -768,7 +769,7 @@
       if (userProgress.completedLessons.length >= total && !userProgress.adminNotified) {
         userProgress.adminNotified = true;
         userProgress.allCompletedAt = new Date().toISOString();
-        await saveUserProgress();
+        await saveUserProgress({ adminNotified: true, allCompletedAt: userProgress.allCompletedAt });
         sendCompletionEmail(currentUser.email, currentUser.displayName || currentUser.email);
       }
     }
@@ -828,8 +829,13 @@
     }
 
     function doLogout() {
-      if (unsubContent) unsubContent();
-      if (unsubUser) unsubUser();
+      if (unsubContent) { unsubContent(); unsubContent = null; }
+      if (unsubUser) { unsubUser(); unsubUser = null; }
+      if (unsubLiveSession) { unsubLiveSession(); unsubLiveSession = null; }
+      if (unsubMyLiveSession) { unsubMyLiveSession(); unsubMyLiveSession = null; }
+      if (unsubAchievements) { unsubAchievements(); unsubAchievements = null; }
+      stopSessionTimer();
+      closeAudioCallUi();
       fb.signOut(fb.auth);
     }
 
@@ -1199,15 +1205,30 @@
       }
     }
 
-    async function saveUserProgress() {
+    // Writes only what actually changed in this action, using atomic
+    // Firestore operations (increment/arrayUnion) instead of overwriting whole
+    // fields — so two devices used around the same time merge safely instead
+    // of one silently overwriting the other's progress.
+    async function saveUserProgress(delta) {
+      delta = delta || {};
       try {
-        await fb.setDoc(fb.doc(fb.db, 'users', currentUser.uid), {
-          email: currentUser.email, xp: userProgress.xp,
-          completedLessons: userProgress.completedLessons, checkpointScores: userProgress.checkpointScores,
-          adminNotified: userProgress.adminNotified, allCompletedAt: userProgress.allCompletedAt,
-          streakDates: userProgress.streakDates, currentStreak: userProgress.currentStreak,
-          longestStreak: userProgress.longestStreak, achievements: userProgress.achievements
-        }, { merge: true });
+        const updates = { email: currentUser.email };
+        if (delta.xpDelta) updates.xp = fb.increment(delta.xpDelta);
+        if (delta.newCompletedLessonIds && delta.newCompletedLessonIds.length) {
+          updates.completedLessons = fb.arrayUnion(...delta.newCompletedLessonIds);
+        }
+        if (delta.checkpointUpdates) {
+          updates.checkpointScores = delta.checkpointUpdates;
+        }
+        if (delta.newAchievementIds && delta.newAchievementIds.length) {
+          updates.achievements = fb.arrayUnion(...delta.newAchievementIds);
+        }
+        if (delta.newStreakDate) updates.streakDates = fb.arrayUnion(delta.newStreakDate);
+        if (delta.currentStreak !== undefined) updates.currentStreak = delta.currentStreak;
+        if (delta.longestStreak !== undefined) updates.longestStreak = delta.longestStreak;
+        if (delta.adminNotified !== undefined) updates.adminNotified = delta.adminNotified;
+        if (delta.allCompletedAt !== undefined) updates.allCompletedAt = delta.allCompletedAt;
+        await fb.setDoc(fb.doc(fb.db, 'users', currentUser.uid), updates, { merge: true });
         return true;
       } catch (e) {
         console.error('Failed to save progress:', e);
@@ -1424,12 +1445,13 @@ const MASCOT_IMAGES = {
 
     function recordDailyActivity() {
       const today = todayStr();
-      if (userProgress.streakDates.includes(today)) return;
+      if (userProgress.streakDates.includes(today)) return { dateAdded: null, currentStreak: userProgress.currentStreak, longestStreak: userProgress.longestStreak };
       const yest = new Date(); yest.setDate(yest.getDate() - 1);
       userProgress.currentStreak = userProgress.streakDates.includes(todayStr(yest)) ? userProgress.currentStreak + 1 : 1;
       userProgress.longestStreak = Math.max(userProgress.longestStreak, userProgress.currentStreak);
       userProgress.streakDates.push(today);
       if (userProgress.streakDates.length > 60) userProgress.streakDates = userProgress.streakDates.slice(-60);
+      return { dateAdded: today, currentStreak: userProgress.currentStreak, longestStreak: userProgress.longestStreak };
     }
 
     function checkAchievements(pct) {
@@ -1646,7 +1668,7 @@ const MASCOT_IMAGES = {
       const questions = lessonMeta.shuffleQuestions !== false ? shuffleQuestionsSpreadingAnswers(fetchedQuestions) : fetchedQuestions.slice();
 
       currentLesson = { ...lessonMeta, questions };
-      currentQuestionIdx = 0; lessonScore = 0; lessonXPEarned = 0;
+      currentQuestionIdx = 0; lessonScore = 0; lessonXPEarned = 0; isFinishingLesson = false;
       document.getElementById('checkpoint-banner').style.display = lessonMeta.isCheckpoint ? 'block' : 'none';
       showView('quiz-view');
       renderQuestion();
@@ -1659,7 +1681,7 @@ const MASCOT_IMAGES = {
         return;
       }
       if (currentLesson.shuffleQuestions !== false) currentLesson.questions = shuffleQuestionsSpreadingAnswers(currentLesson.questions);
-      currentQuestionIdx = 0; lessonScore = 0; lessonXPEarned = 0;
+      currentQuestionIdx = 0; lessonScore = 0; lessonXPEarned = 0; isFinishingLesson = false;
       showView('quiz-view');
       renderQuestion();
     }
@@ -1712,6 +1734,7 @@ const MASCOT_IMAGES = {
 
       const chosen = shuffleArray(usable).slice(0, Math.min(MAX_PAIRS, usable.length));
       const pairs = chosen.map((q, i) => ({ pairId: q.id || ('p' + i), left: q.symbol, right: q.correct }));
+      isFinishingLesson = false;
 
       matchState = {
         lessonMeta, pairs,
@@ -1793,6 +1816,8 @@ const MASCOT_IMAGES = {
     }
 
     async function finishMatchingGame() {
+      if (isFinishingLesson) return;
+      isFinishingLesson = true;
       const totalPairs = matchState.pairs.length;
       const pct = Math.round((totalPairs / (totalPairs + matchState.mistakes)) * 100);
       const xpEarned = totalPairs * 10 + 15;
@@ -1805,23 +1830,36 @@ const MASCOT_IMAGES = {
       const prevAchievements = userProgress.achievements.slice();
       userProgress.xp += xpEarned;
       bumpXpBadge();
+      const newCompletedLessonIds = [];
       if (!userProgress.completedLessons.includes(matchState.lessonMeta.id)) {
         userProgress.completedLessons.push(matchState.lessonMeta.id);
+        newCompletedLessonIds.push(matchState.lessonMeta.id);
       }
 
-      recordDailyActivity();
+      const streakResult = recordDailyActivity();
       const newlyUnlocked = checkAchievements(pct);
 
-      const ok = await saveUserProgress();
+      const delta = {
+        xpDelta: xpEarned,
+        newCompletedLessonIds,
+        newAchievementIds: newlyUnlocked,
+        currentStreak: streakResult.currentStreak,
+        longestStreak: streakResult.longestStreak
+      };
+      if (streakResult.dateAdded) delta.newStreakDate = streakResult.dateAdded;
+
+      const ok = await saveUserProgress(delta);
       if (!ok) {
         userProgress.xp = prevXP;
         userProgress.completedLessons = prevCompleted;
         userProgress.streakDates = prevStreakDates; userProgress.currentStreak = prevCurrentStreak;
         userProgress.longestStreak = prevLongestStreak; userProgress.achievements = prevAchievements;
         alert("እድገትዎን ማስቀመጥ አልተቻለም — እባክዎ የኢንተርኔት ግንኙነትዎን ያረጋግጡና እንደገና ይሞክሩ።");
+        isFinishingLesson = false;
         showView('student-home');
         return;
       }
+      isFinishingLesson = false;
       newlyUnlocked.forEach((id, i) => setTimeout(() => showAchievementToast(id), i * 1200));
       checkAndNotifyAllCleared();
 
@@ -1858,7 +1896,10 @@ const MASCOT_IMAGES = {
       const quizCard = document.querySelector('#quiz-view .quiz-card');
       if (quizCard) { quizCard.style.animation = 'none'; void quizCard.offsetWidth; quizCard.style.animation = ''; }
       document.getElementById('quiz-progress-num').innerText = `ጥያቄ ${currentQuestionIdx + 1}/${currentLesson.questions.length}`;
-      document.getElementById('next-btn').style.display = 'none';
+      const nextBtnEl = document.getElementById('next-btn');
+      nextBtnEl.style.display = 'none';
+      nextBtnEl.disabled = false;
+      nextBtnEl.style.opacity = '1';
 
       document.getElementById('quiz-symbol').innerText = q.symbol || '';
 
@@ -1941,6 +1982,12 @@ const MASCOT_IMAGES = {
     }
 
     async function finishLesson() {
+      if (isFinishingLesson) return;
+      isFinishingLesson = true;
+      const nextBtn = document.getElementById('next-btn');
+      nextBtn.disabled = true;
+      nextBtn.style.opacity = '0.6';
+
       const pct = Math.round((lessonScore / currentLesson.questions.length) * 100);
       const isCheckpoint = !!currentLesson.isCheckpoint;
       const threshold = currentLesson.passThreshold || 85;
@@ -1958,25 +2005,44 @@ const MASCOT_IMAGES = {
       userProgress.xp += lessonXPEarned;
       bumpXpBadge();
 
+      const newCompletedLessonIds = [];
       if (isCheckpoint) {
         userProgress.checkpointScores[currentLesson.id] = pct;
-        if (passed && !userProgress.completedLessons.includes(currentLesson.id)) userProgress.completedLessons.push(currentLesson.id);
+        if (passed && !userProgress.completedLessons.includes(currentLesson.id)) {
+          userProgress.completedLessons.push(currentLesson.id);
+          newCompletedLessonIds.push(currentLesson.id);
+        }
       } else if (!userProgress.completedLessons.includes(currentLesson.id)) {
         userProgress.completedLessons.push(currentLesson.id);
+        newCompletedLessonIds.push(currentLesson.id);
       }
 
-      recordDailyActivity();
+      const streakResult = recordDailyActivity();
       const newlyUnlocked = checkAchievements(pct);
 
-      const ok = await saveUserProgress();
+      const delta = {
+        xpDelta: lessonXPEarned,
+        newCompletedLessonIds,
+        newAchievementIds: newlyUnlocked,
+        currentStreak: streakResult.currentStreak,
+        longestStreak: streakResult.longestStreak
+      };
+      if (isCheckpoint) delta.checkpointUpdates = { [currentLesson.id]: pct };
+      if (streakResult.dateAdded) delta.newStreakDate = streakResult.dateAdded;
+
+      const ok = await saveUserProgress(delta);
       if (!ok) {
         userProgress.xp = prevXP; userProgress.completedLessons = prevCompleted; userProgress.checkpointScores = prevScores;
         userProgress.streakDates = prevStreakDates; userProgress.currentStreak = prevCurrentStreak;
         userProgress.longestStreak = prevLongestStreak; userProgress.achievements = prevAchievements;
         alert("እድገትዎን ማስቀመጥ አልተቻለም — እባክዎ የኢንተርኔት ግንኙነትዎን ያረጋግጡና እንደገና ይሞክሩ።");
+        nextBtn.disabled = false;
+        nextBtn.style.opacity = '1';
+        isFinishingLesson = false;
         showView('student-home');
         return;
       }
+      isFinishingLesson = false;
       checkAndNotifyAllCleared();
       newlyUnlocked.forEach((id, i) => setTimeout(() => showAchievementToast(id), i * 1200));
 
