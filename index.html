@@ -120,6 +120,7 @@
     .badge-tile.earned { background: linear-gradient(160deg, #FFF6E0, #FBEBC0); box-shadow: 0 3px 10px rgba(200,155,60,0.2); }
     .badge-icon { font-size: 1.8rem; }
     .badge-title { font-size: 0.68rem; font-weight: 700; color: #666; margin-top: 4px; }
+    .badge-caption { font-size: 0.6rem; color: #999; margin-top: 2px; line-height: 1.25; }
 
     .achievement-toast { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: white; padding: 12px 20px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.18); display: flex; align-items: center; gap: 12px; z-index: 200; animation: toastIn 0.35s ease; }
     .achievement-toast.out { animation: toastOut 0.4s ease forwards; }
@@ -609,6 +610,7 @@
         <div class="admin-card">
           <h3>🏅 Achievements</h3>
           <div id="achievements-admin-list" style="margin-bottom:16px;"></div>
+          <button class="btn btn-sm btn-outline" style="margin-bottom:16px;" onclick="seedDefaultAchievements()">➕ Add the 5 starter achievements</button>
           <h4 id="achievement-form-title" style="margin-bottom:8px;">Add Achievement</h4>
           <input type="hidden" id="ach-edit-id" value="">
           <div class="form-group"><label>Icon (emoji)</label><input type="text" id="ach-icon" maxlength="4" placeholder="🥇"></div>
@@ -859,6 +861,7 @@
       document.getElementById('teacher-mode-btn').style.display = isTeacher ? 'inline-block' : 'none';
 
       await ensureUserDoc(user);
+      await loadAchievementDefsOnce();
       listenToUserProgress(user);
       listenToContentIndex();
       listenToAchievementDefs();
@@ -1331,24 +1334,36 @@ const MASCOT_IMAGES = {
       { icon: '🏆', title: 'Graduate', desc: 'ሙሉውን ኮርስ አጠናቀዋል', ruleType: 'all_complete', ruleValue: null }
     ];
 
+    async function loadAchievementDefsOnce() {
+      try {
+        const snap = await fb.getDocs(fb.collection(fb.db, 'achievements'));
+        if (snap.empty) return;
+        ACHIEVEMENT_DEFS = [];
+        snap.forEach(d => ACHIEVEMENT_DEFS.push({ id: d.id, ...d.data() }));
+      } catch (e) {
+        console.error('Failed to preload achievements:', e);
+      }
+    }
+
     function listenToAchievementDefs() {
       if (unsubAchievements) unsubAchievements();
-      unsubAchievements = fb.onSnapshot(fb.collection(fb.db, 'achievements'), async (snap) => {
-        if (snap.empty) {
-          if (isAdmin) {
-            for (const a of DEFAULT_ACHIEVEMENTS) {
-              const newRef = fb.doc(fb.collection(fb.db, 'achievements'));
-              await fb.setDoc(newRef, a);
-            }
-          }
-          return;
-        }
+      unsubAchievements = fb.onSnapshot(fb.collection(fb.db, 'achievements'), (snap) => {
         ACHIEVEMENT_DEFS = [];
         snap.forEach(d => ACHIEVEMENT_DEFS.push({ id: d.id, ...d.data() }));
         if (document.getElementById('student-home').classList.contains('active')) renderStudentHome();
         if (document.getElementById('account-view').classList.contains('active')) renderAccountView();
         if (document.getElementById('admin-view').classList.contains('active')) renderAchievementsAdmin();
       });
+    }
+
+    async function seedDefaultAchievements() {
+      if (ACHIEVEMENT_DEFS.length > 0) {
+        if (!confirm('There are already ' + ACHIEVEMENT_DEFS.length + ' achievements set up. Add the 5 starter ones anyway?')) return;
+      }
+      for (const a of DEFAULT_ACHIEVEMENTS) {
+        const newRef = fb.doc(fb.collection(fb.db, 'achievements'));
+        await fb.setDoc(newRef, a);
+      }
     }
 
     function achRuleLabel(a) {
@@ -1479,7 +1494,7 @@ const MASCOT_IMAGES = {
       if (!def) return;
       const toast = document.createElement('div');
       toast.className = 'achievement-toast';
-      toast.innerHTML = `<div class="achievement-toast-icon">${def.icon}</div><div><strong>New Badge!</strong><div>${def.title}</div></div>`;
+      toast.innerHTML = `<div class="achievement-toast-icon">${def.icon}</div><div><strong>New Badge!</strong><div>${def.title}</div>${def.desc ? `<div style="font-size:0.7rem; color:#888;">${def.desc}</div>` : ''}</div>`;
       document.body.appendChild(toast);
       celebrate();
       setTimeout(() => toast.classList.add('out'), 3000);
@@ -1512,7 +1527,8 @@ const MASCOT_IMAGES = {
       const grid = document.getElementById('account-achievements');
       grid.innerHTML = ACHIEVEMENT_DEFS.map(a => {
         const earned = (userProgress.achievements || []).includes(a.id);
-        return `<div class="badge-tile ${earned ? 'earned' : 'locked'}"><div class="badge-icon">${a.icon}</div><div class="badge-title">${a.title}</div></div>`;
+        const caption = earned ? (a.desc || '') : `🔒 ${achRuleLabel(a)}`;
+        return `<div class="badge-tile ${earned ? 'earned' : 'locked'}"><div class="badge-icon">${a.icon}</div><div class="badge-title">${a.title}</div><div class="badge-caption">${caption}</div></div>`;
       }).join('');
     }
 
