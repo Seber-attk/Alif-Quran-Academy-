@@ -279,6 +279,7 @@
         <input type="text" id="auth-name" placeholder="ለምሳሌ፦ አበበ">
       </div>
       <button id="auth-submit-btn" class="btn" style="width:100%; padding:12px;" onclick="handleAuthSubmit()">ግባ</button>
+      <p id="forgot-password-link" style="text-align:center; margin:10px 0 0 0;"><a href="#" onclick="handleForgotPassword(); return false;" style="color:var(--primary); font-size:0.85rem;">የይለፍ ቃል ረስተዋል?</a></p>
       <div id="auth-error" class="auth-error"></div>
     </div>
   </div>
@@ -389,6 +390,7 @@
           <button id="account-teacher-btn" class="btn btn-outline" style="display:none;" onclick="showView('teacher-view')">👨‍🏫 Teacher Panel</button>
           <button id="account-admin-btn" class="btn btn-outline" style="display:none;" onclick="showView('admin-view')">Admin Panel</button>
           <button class="btn btn-outline" onclick="toggleSound()">🔊 ድምጽ ማብራት/ማጥፋት</button>
+          <button class="btn btn-outline" onclick="contactSupport()">✉️ ድጋፍ ያግኙ</button>
           <button class="btn btn-danger" onclick="doLogout()">ውጣ</button>
         </div>
       </div>
@@ -655,7 +657,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import {
       getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-      onAuthStateChanged, signOut, updateProfile
+      onAuthStateChanged, signOut, updateProfile, sendPasswordResetEmail
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, onSnapshot, increment, arrayUnion
@@ -683,7 +685,7 @@
     window.__fb = {
       auth, db, doc, getDoc, setDoc, deleteDoc, collection, getDocs, onSnapshot, increment, arrayUnion,
       createUserWithEmailAndPassword, signInWithEmailAndPassword,
-      onAuthStateChanged, signOut, updateProfile, ADMIN_EMAILS, TEACHER_EMAILS
+      onAuthStateChanged, signOut, updateProfile, sendPasswordResetEmail, ADMIN_EMAILS, TEACHER_EMAILS
     };
 
     window.dispatchEvent(new Event('fb-ready'));
@@ -815,6 +817,28 @@
       } finally {
         submitBtn.disabled = false;
       }
+    }
+
+    async function handleForgotPassword() {
+      const email = document.getElementById('auth-email').value.trim();
+      const errEl = document.getElementById('auth-error');
+      errEl.style.color = '';
+      errEl.innerText = '';
+      if (!email) { errEl.innerText = 'እባክዎ መጀመሪያ ከላይ ያለውን ኢሜይልዎን ያስገቡ፣ ከዚያም "የይለፍ ቃል ረስተዋል?" የሚለውን እንደገና ይጫኑ።'; return; }
+      try {
+        await fb.sendPasswordResetEmail(fb.auth, email);
+        errEl.style.color = 'var(--primary)';
+        errEl.innerText = 'የይለፍ ቃል መቀየሪያ ኢሜይል ወደ ' + email + ' ተልኳል።';
+      } catch (e) {
+        errEl.innerText = friendlyAuthError(e.code);
+      }
+    }
+
+    function contactSupport() {
+      const userEmail = (currentUser && currentUser.email) || '';
+      const subject = encodeURIComponent('LetterLearner – ድጋፍ');
+      const body = encodeURIComponent(`ሰላም፣\n\nየሚከተለው እርዳታ እፈልጋለሁ፦\n\n\n---\nየገባሁበት መለያ: ${userEmail}`);
+      window.location.href = `mailto:abclearner5577@gmail.com?subject=${subject}&body=${body}`;
     }
 
     function friendlyAuthError(code) {
