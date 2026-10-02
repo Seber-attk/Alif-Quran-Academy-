@@ -253,6 +253,21 @@
     #quran-audio-container { margin-top:16px; border-radius:14px; overflow:hidden; background:#000; height:0; }
     #quran-audio-container.active { height:420px; }
     #quran-audio-container iframe { width:100%; height:100%; border:0; }
+    .timer-pill{background:#EEF6FF;color:#1F5FBF;font-weight:800;font-size:.85rem;padding:5px 12px;border-radius:16px;transition:.2s}
+    .timer-pill.over{background:#FFEBEE;color:#C62828}
+    .stars{color:#E0A800;letter-spacing:1px;font-size:.8rem}
+    .extra-card{background:#fff;border-radius:16px;padding:14px 16px;margin-bottom:14px;box-shadow:0 4px 10px rgba(0,0,0,.05)}
+    .extra-card h3{margin:0 0 4px 0;font-size:1.05rem}.extra-card p{margin:0 0 10px 0;color:#666;font-size:.9rem}
+    .extra-card.warn{background:#FFF3E0;color:#B45309;font-weight:700}.extra-card.ok{background:#E8F5E9;color:#1B5E3A;font-weight:700}
+    .mastery-row{display:flex;gap:10px;flex-wrap:wrap;font-weight:700;font-size:.9rem;margin-top:6px}
+    .modal-back{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+    .modal-card{background:#fff;border-radius:20px;padding:22px;max-width:360px;width:100%;text-align:center}
+    @keyframes starPop{0%{transform:scale(0) rotate(-40deg);opacity:0}70%{transform:scale(1.35)}100%{transform:scale(1);opacity:1}}
+    .star-pop{display:inline-block;font-size:2.2rem;animation:starPop .5s both}.star-pop.off{color:#D9D9D9}.star-pop.on{color:#E0A800}
+    .res-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+    .res-tile{background:#F7F3EA;border-radius:14px;padding:10px 6px}.res-tile b{display:block;font-size:1.25rem}.res-tile span{font-size:.72rem;color:#888;font-weight:700}
+    .res-msg{background:#E8F5E9;color:#1B5E3A;border-radius:12px;padding:10px;font-weight:700;margin-bottom:10px}
+    .res-list{text-align:left;font-size:.85rem;margin-top:8px}.res-list div{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #eee}
   </style>
 </head>
 <body>
@@ -357,6 +372,7 @@
           </button>
         </div>
 
+        <div id="home-extras-wrap"></div>
         <div id="home-live-class-wrap"></div>
       </div>
 
@@ -369,6 +385,12 @@
       </div>
 
       <div id="account-view" class="view">
+        <div class="extra-card" id="reminder-card">
+          <h3>🔔 ዕለታዊ ማስታወሻ</h3>
+          <label style="display:flex;justify-content:space-between;align-items:center;"><span>ለትምህርት አስታዋሽ ላክልኝ</span><input type="checkbox" id="reminder-on" onchange="toggleReminder(this.checked)"></label>
+          <div style="margin-top:8px;"><input type="time" id="reminder-time" onchange="saveReminderTime(this.value)"></div>
+          <small id="reminder-note" style="color:#888;display:block;margin-top:6px;"></small>
+        </div>
         <div class="progress-card" style="text-align:center;">
           <div style="font-size:2.5rem;">👤</div>
           <h2 style="margin:8px 0 2px 0;" id="account-name">-</h2>
@@ -406,6 +428,7 @@
       <div id="quiz-view" class="view">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
           <button class="btn btn-outline" onclick="showView('student-home')">← ውጣ</button>
+          <span id="quiz-timer" class="timer-pill">⏱ 0:00</span>
           <span id="quiz-progress-num" style="font-weight:bold; color:#666;">Question 1/1</span>
         </div>
 
@@ -491,6 +514,7 @@
               <div id="summary-xp" class="stat-val">+25 XP</div>
             </div>
           </div>
+          <div id="summary-mastery" style="margin:0 0 14px 0;"></div>
           <button id="retry-btn" class="btn btn-warning" style="width:100%; padding:15px; font-size:1.1rem; margin-bottom:10px; display:none;" onclick="retryLesson()">እንደገና ሞክር</button>
           <button class="btn" style="width:100%; padding:15px; font-size:1.1rem;" onclick="showView('student-home')">ቀጥል</button>
         </div>
@@ -533,6 +557,7 @@
             <label>Lesson Type</label>
             <select id="new-lesson-type" onchange="onLessonTypeChange()">
               <option value="quiz">Quiz (multiple choice)</option>
+              <option value="placement">🎓 Placement Exam (fast-track to live class)</option>
               <option value="matching">🧩 Matching Game (pair letters with sounds)</option>
             </select>
           </div>
@@ -585,6 +610,10 @@
           <div class="form-group">
             <label id="q-correct-label">Exact Correct Answer</label>
             <input type="text" id="q-correct" placeholder="e.g. A">
+          </div>
+          <div class="form-group">
+            <label>⏱ Good time (seconds) — used for star rating</label>
+            <input type="number" id="q-goodtime" min="2" max="120" placeholder="10">
           </div>
           <button class="btn" onclick="saveQuestion()">Save Question</button>
           <button id="cancel-question-edit" class="btn btn-outline" style="display:none;" onclick="resetQuestionForm()">Cancel Edit</button>
@@ -718,7 +747,7 @@
     let isTeacher = false;
     let appData = { levels: [] };                 // structure only
     let lessonQuestionsCache = {};                 // lessonId -> questions[]
-    let userProgress = { xp: 0, completedLessons: [], checkpointScores: {}, adminNotified: false, allCompletedAt: null, streakDates: [], currentStreak: 0, longestStreak: 0, achievements: [] };
+    let userProgress = { xp: 0, completedLessons: [], checkpointScores: {}, adminNotified: false, allCompletedAt: null, streakDates: [], currentStreak: 0, longestStreak: 0, achievements: [], liveUnlocked: false, mastery: {} };
 
     let currentLesson = null;
     let copySourceMedia = null; // { img, audio } carried over when duplicating a question
@@ -761,7 +790,7 @@
 
     function getTotalLessonCount() {
       let total = 0;
-      appData.levels.forEach(l => { total += l.lessons.length; });
+      appData.levels.forEach(l => { total += l.lessons.filter(x => x.type !== 'placement').length; });
       return total;
     }
 
@@ -909,8 +938,9 @@
           xp: d.xp || 0, completedLessons: d.completedLessons || [], checkpointScores: d.checkpointScores || {},
           adminNotified: d.adminNotified || false, allCompletedAt: d.allCompletedAt || null,
           streakDates: d.streakDates || [], currentStreak: d.currentStreak || 0, longestStreak: d.longestStreak || 0,
-          achievements: d.achievements || []
+          achievements: d.achievements || [], liveUnlocked: d.liveUnlocked || false, mastery: d.mastery || {}
         };
+        window.__progressLoaded = true;
         document.getElementById('total-xp').innerText = userProgress.xp;
         if (document.getElementById('student-home').classList.contains('active')) renderStudentHome();
         if (document.getElementById('lessons-view').classList.contains('active')) renderLessonsView();
@@ -1250,6 +1280,8 @@
         if (delta.newAchievementIds && delta.newAchievementIds.length) {
           updates.achievements = fb.arrayUnion(...delta.newAchievementIds);
         }
+        if (delta.liveUnlocked) updates.liveUnlocked = true;
+        if (delta.masteryUpdates) updates.mastery = delta.masteryUpdates;
         if (delta.newStreakDate) updates.streakDates = fb.arrayUnion(delta.newStreakDate);
         if (delta.currentStreak !== undefined) updates.currentStreak = delta.currentStreak;
         if (delta.longestStreak !== undefined) updates.longestStreak = delta.longestStreak;
@@ -1534,6 +1566,7 @@ const MASCOT_IMAGES = {
       document.getElementById('account-teacher-btn').style.display = isTeacher ? 'block' : 'none';
       document.getElementById('account-admin-btn').style.display = isAdmin ? 'block' : 'none';
 
+      initReminderUi();
       document.getElementById('account-streak-num').innerText = userProgress.currentStreak || 0;
       const dayLabels = ['ሰ', 'ማ', 'ረ', 'ሐ', 'ዓ', 'ቅ', 'እ'];
       const today = new Date();
@@ -1569,6 +1602,7 @@ const MASCOT_IMAGES = {
       let totalLessons = 0, clearedCount = 0, checkpointsCleared = 0, previousLessonCleared = true, nextLesson = null;
       appData.levels.forEach((level) => {
         level.lessons.forEach((lesson) => {
+          if (lesson.type === 'placement') return;
           totalLessons++;
           const cleared = isLessonCleared(lesson);
           if (cleared) { clearedCount++; if (lesson.isCheckpoint) checkpointsCleared++; }
@@ -1623,10 +1657,11 @@ const MASCOT_IMAGES = {
         continueBtn.style.display = 'none';
       }
 
+      renderHomeExtras(stats);
       const liveWrap = document.getElementById('home-live-class-wrap');
       liveWrap.innerHTML = '';
       const allCleared = stats.totalLessons > 0 && stats.clearedCount === stats.totalLessons;
-      if (allCleared && appData.liveClass && appData.liveClass.meetLink) {
+      if ((allCleared || userProgress.liveUnlocked) && appData.liveClass && appData.liveClass.meetLink) {
         liveWrap.innerHTML = `
           <div class="live-class-card">
             <div style="font-size:2.5rem;">🕌</div>
@@ -1653,6 +1688,7 @@ const MASCOT_IMAGES = {
         path.className = 'lesson-path';
 
         level.lessons.forEach((lesson) => {
+          if (lesson.type === 'placement') return;
           const cleared = isLessonCleared(lesson);
           const isUnlocked = previousLessonCleared;
           const attempted = lesson.isCheckpoint && typeof userProgress.checkpointScores[lesson.id] === 'number';
@@ -1670,7 +1706,7 @@ const MASCOT_IMAGES = {
             <div class="path-node-inner ${stateClass} ${lesson.isCheckpoint ? 'checkpoint' : ''}">
               <div class="path-bubble">${lesson.isCheckpoint && isUnlocked ? '🏆' : icon}</div>
               <div class="path-label">${lesson.title}</div>
-              ${subText ? `<div class="path-sub">${subText}</div>` : ''}
+              ${(subText || masteryBadge(lesson.id)) ? `<div class="path-sub">${subText} ${masteryBadge(lesson.id)}</div>` : ''}
             </div>
           `;
           if (isUnlocked || cleared) node.querySelector('.path-node-inner').onclick = () => startLesson(lesson.id);
@@ -1942,6 +1978,8 @@ const MASCOT_IMAGES = {
       nextBtnEl.style.opacity = '1';
 
       document.getElementById('quiz-symbol').innerText = q.symbol || '';
+      if (currentQuestionIdx === 0) questionResults = [];
+      startQuestionTimer(q);
 
       const imgEl = document.getElementById('quiz-image');
       if (q.img) { imgEl.src = q.img; imgEl.style.display = 'block'; } else { imgEl.style.display = 'none'; }
@@ -2002,6 +2040,9 @@ const MASCOT_IMAGES = {
     function checkAnswer(selectedBtn, selectedOpt, correctOpt) {
       const allBtns = document.querySelectorAll('.option-btn');
       allBtns.forEach(b => b.disabled = true);
+      const elapsed = stopQuestionTimer();
+      const curQ = currentLesson.questions[currentQuestionIdx];
+      questionResults.push({ ok: selectedOpt.trim().toLowerCase() === correctOpt.trim().toLowerCase(), elapsed, good: curQ.goodTime || 10, sym: curQ.symbol || ('#' + (currentQuestionIdx + 1)) });
 
       if (selectedOpt.trim().toLowerCase() === correctOpt.trim().toLowerCase()) {
         selectedBtn.classList.add('correct');
@@ -2031,7 +2072,8 @@ const MASCOT_IMAGES = {
       const pct = Math.round((lessonScore / currentLesson.questions.length) * 100);
       const isCheckpoint = !!currentLesson.isCheckpoint;
       const threshold = currentLesson.passThreshold || 85;
-      const passed = !isCheckpoint || pct >= threshold;
+      const isPlacement = currentLesson.type === 'placement';
+      const passed = isPlacement ? pct >= (currentLesson.passThreshold || 90) : (!isCheckpoint || pct >= threshold);
 
       const prevXP = userProgress.xp;
       const prevCompleted = userProgress.completedLessons.slice();
@@ -2052,7 +2094,7 @@ const MASCOT_IMAGES = {
           userProgress.completedLessons.push(currentLesson.id);
           newCompletedLessonIds.push(currentLesson.id);
         }
-      } else if (!userProgress.completedLessons.includes(currentLesson.id)) {
+      } else if (!isPlacement && !userProgress.completedLessons.includes(currentLesson.id)) {
         userProgress.completedLessons.push(currentLesson.id);
         newCompletedLessonIds.push(currentLesson.id);
       }
@@ -2068,6 +2110,16 @@ const MASCOT_IMAGES = {
         longestStreak: streakResult.longestStreak
       };
       if (isCheckpoint) delta.checkpointUpdates = { [currentLesson.id]: pct };
+      const mastery = computeMastery(questionResults, pct);
+      const prevMastery = (userProgress.mastery || {})[currentLesson.id];
+      if (isPlacement) {
+        if (passed) delta.liveUnlocked = true;
+      } else {
+        const prevM = (userProgress.mastery || {})[currentLesson.id];
+        if (!prevM || mastery.stars > prevM.stars || (mastery.stars === prevM.stars && mastery.pct >= prevM.pct)) {
+          delta.masteryUpdates = { [currentLesson.id]: mastery };
+        }
+      }
       if (streakResult.dateAdded) delta.newStreakDate = streakResult.dateAdded;
 
       const ok = await saveUserProgress(delta);
@@ -2088,10 +2140,18 @@ const MASCOT_IMAGES = {
 
       document.getElementById('summary-score').innerText = `${pct}%`;
       document.getElementById('summary-xp').innerText = `+${lessonXPEarned} XP`;
+      renderSummaryMastery(mastery, isPlacement, prevMastery);
 
       const retryBtn = document.getElementById('retry-btn');
       const subtext = document.getElementById('completion-subtext');
-      if (isCheckpoint && !passed) {
+      if (isPlacement) {
+        const thr = currentLesson.passThreshold || 90;
+        document.getElementById('completion-emoji').innerText = passed ? '🕌' : '📖';
+        document.getElementById('completion-title').innerText = passed ? 'ፈተናውን አልፈዋል!' : 'ጥቂት ቀርቷል!';
+        subtext.innerText = passed ? 'የቀጥታ ቁርኣን ትምህርት ተከፍቶልዎታል።' : `ቀጥታ ክፍል ለመግባት ${thr}% ያስፈልጋል። እንደገና ይሞክሩ ወይም ትምህርቶቹን ይማሩ።`;
+        retryBtn.style.display = passed ? 'none' : 'block';
+        if (passed) celebrate();
+      } else if (isCheckpoint && !passed) {
         document.getElementById('completion-emoji').innerText = '🚩';
         document.getElementById('completion-title').innerText = 'ጥቂት ቀርቷል!';
         subtext.innerText = `ይህን የመልቀቂያ ፈተና ለማለፍ እና ቀጣዩን ደረጃ ለመክፈት ${threshold}% ያስፈልግዎታል። ደግመው ይሞክሩ!`;
@@ -2110,6 +2170,149 @@ const MASCOT_IMAGES = {
       }
       showView('completion-view');
     }
+
+    // --- MASTERY, TIMER, PLACEMENT, REMINDERS ---
+    let questionResults = [], qStart = 0, qTimerId = null;
+    const TIER = { mastered: ['🟢', 'ተካኝ'], learning: ['🟡', 'በመማር ላይ'], practice: ['🔴', 'ልምምድ ያስፈልጋል'] };
+    function starsStr(n) { return '★'.repeat(n) + '☆'.repeat(5 - n); }
+    function fmtT(sec) { sec = Math.floor(sec); return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); }
+
+    function startQuestionTimer(q) {
+      clearInterval(qTimerId);
+      const good = q.goodTime || 10; qStart = Date.now();
+      const el = document.getElementById('quiz-timer');
+      const tick = () => {
+        if (!document.getElementById('quiz-view').classList.contains('active')) { clearInterval(qTimerId); return; }
+        const t = (Date.now() - qStart) / 1000;
+        el.textContent = `⏱ ${fmtT(t)} / 🎯 ${fmtT(good)}`;
+        el.classList.toggle('over', t > good);
+      };
+      tick(); qTimerId = setInterval(tick, 250);
+    }
+    function stopQuestionTimer() { clearInterval(qTimerId); return (Date.now() - qStart) / 1000; }
+
+    // Stars = 75% accuracy + 25% speed vs admin's "good time". Any mistake caps at 4 stars.
+    function computeMastery(results, pct) {
+      const mistakes = results.filter(r => !r.ok).length;
+      const right = results.filter(r => r.ok);
+      const speed = right.length ? right.reduce((a, r) => a + Math.min(1, r.good / Math.max(r.elapsed, 0.1)), 0) / right.length : 0;
+      const score = Math.round(pct * 0.75 + speed * 100 * 0.25);
+      let stars = score >= 95 ? 5 : score >= 85 ? 4 : score >= 70 ? 3 : score >= 50 ? 2 : 1;
+      if (mistakes > 0) stars = Math.min(stars, 4);
+      const avgTime = results.length ? Math.round(results.reduce((a, r) => a + r.elapsed, 0) / results.length * 10) / 10 : 0;
+      const totalTime = Math.round(results.reduce((a, r) => a + r.elapsed, 0) * 10) / 10;
+      return { stars, pct, correct: right.length, total: results.length, totalTime, tier: pct >= 90 ? 'mastered' : pct >= 70 ? 'learning' : 'practice', speed: Math.round(speed * 100), mistakes, avgTime, at: Date.now() };
+    }
+    function masteryBadge(id) {
+      const m = (userProgress.mastery || {})[id];
+      return m ? `<span class="stars" title="${m.pct}%">${starsStr(m.stars)} ${TIER[m.tier][0]}</span>` : '';
+    }
+    function renderSummaryMastery(m, isPlacement, prev) {
+      const box = document.getElementById('summary-mastery');
+      const tile = (v, l) => `<div class="res-tile"><b>${v}</b><span>${l}</span></div>`;
+      let msg;
+      if (!isPlacement && m.stars === 5) msg = '🌟 ድንቅ! ፈጣንና ያለ ስህተት!';
+      else if (m.pct >= 90 && m.speed < 60) msg = '✅ ትክክለኛ ነዎት — አሁን ፍጥነትዎን ይጨምሩ ⚡';
+      else if (m.pct >= 90) msg = '👏 በጣም ጥሩ ውጤት!';
+      else if (m.pct >= 70) msg = '👍 ጥሩ እየሄዱ ነው — ጥቂት ልምምድ ይቀራል።';
+      else msg = '💪 አይዞዎት! ደግመው ሲሞክሩ ይሻሻላሉ።';
+      let best = '';
+      if (!isPlacement && prev) {
+        const d = m.stars - prev.stars;
+        best = d > 0 ? `<div style="color:#1B5E3A;font-weight:800;">🆕 አዲስ ምርጥ ውጤት! (ከ${prev.stars}★ ወደ ${m.stars}★)</div>`
+          : `<div style="color:#888;">የቀደመ ምርጥ ውጤትዎ፦ ${prev.stars}★ · ${prev.pct}%</div>`;
+      }
+      const stars = isPlacement ? '' : `<div>${[1,2,3,4,5].map(i => `<span class="star-pop ${i <= m.stars ? 'on' : 'off'}" style="animation-delay:${i * 0.15}s">★</span>`).join('')}</div>
+        <div style="font-weight:800;margin:4px 0;">${TIER[m.tier][0]} ${TIER[m.tier][1]}</div>`;
+      const rows = questionResults.map(r => `<div><span>${r.ok ? '✅' : '❌'} ${r.sym}</span><span style="color:${r.elapsed > r.good ? '#C62828' : '#1B5E3A'}">${r.elapsed > r.good ? '🐢' : '⚡'} ${fmtT(r.elapsed)} / ${fmtT(r.good)}</span></div>`).join('');
+      box.innerHTML = `${stars}
+        <div class="res-grid">
+          ${tile('⏱ ' + fmtT(m.totalTime), 'ጠቅላላ ጊዜ')}
+          ${tile('🎯 ' + m.correct + '/' + m.total, 'ትክክል')}
+          ${tile('⚡ ' + m.avgTime + 'ሰ', 'አማካይ በጥያቄ')}
+          ${tile('🔥 ' + (userProgress.currentStreak || 0), 'ተከታታይ ቀናት')}
+        </div>
+        <div class="res-msg">${msg}</div>${best}
+        <details class="res-list"><summary style="cursor:pointer;font-weight:800;">📋 የጥያቄ ዝርዝር</summary>${rows}</details>`;
+    }
+
+    function findPlacementLesson() {
+      let f = null;
+      appData.levels.forEach(l => l.lessons.forEach(x => { if (x.type === 'placement' && !f) f = x; }));
+      return f;
+    }
+    function renderHomeExtras(stats) {
+      const wrap = document.getElementById('home-extras-wrap'); if (!wrap) return;
+      let html = '';
+      const allCleared = stats.totalLessons > 0 && stats.clearedCount === stats.totalLessons;
+      if (!userProgress.streakDates.includes(todayStr()) && userProgress.currentStreak > 0) {
+        html += `<div class="extra-card warn">🔥 የ${userProgress.currentStreak} ቀን ተከታታይነትዎን ዛሬ ያቆዩ — አንድ ትምህርት ብቻ ይበቃል!</div>`;
+      }
+      const pl = findPlacementLesson();
+      if (pl && !allCleared && !userProgress.liveUnlocked) {
+        html += `<div class="extra-card"><h3>🎓 ፊደላትን ጨርሰዋል?</h3><p>ቀድመው ካወቁ ልዩ ፈተና ወስደው በቀጥታ ወደ ቁርኣን ክፍል ይግቡ (${pl.passThreshold || 90}%+)።</p><button class="btn" onclick="startLesson('${pl.id}')">ፈተና ጀምር</button></div>`;
+      } else if (userProgress.liveUnlocked && !allCleared) {
+        html += `<div class="extra-card ok">✅ የቀጥታ ክፍል ተከፍቶልዎታል</div>`;
+      }
+      const entries = Object.entries(userProgress.mastery || {}).filter(([id]) => findLessonMeta(id));
+      if (entries.length) {
+        const c = { mastered: 0, learning: 0, practice: 0 };
+        entries.forEach(([, m]) => c[m.tier]++);
+        const avg = entries.reduce((a, [, m]) => a + m.stars, 0) / entries.length;
+        const weak = entries.find(([, m]) => m.tier === 'practice');
+        html += `<div class="extra-card"><h3>🧠 ችሎታዎ</h3><div class="stars" style="font-size:1.2rem;">${starsStr(Math.round(avg))} <span style="color:#888;font-size:.85rem;">(${avg.toFixed(1)}/5)</span></div>
+          <div class="mastery-row"><span>🟢 ${c.mastered}</span><span>🟡 ${c.learning}</span><span>🔴 ${c.practice}</span></div>
+          ${weak ? `<button class="btn btn-sm btn-warning" style="margin-top:10px;" onclick="startLesson('${weak[0]}')">🔴 ልምምድ፦ ${findLessonMeta(weak[0]).title}</button>` : ''}</div>`;
+      }
+      wrap.innerHTML = html;
+      maybePromptPlacement(pl, stats, allCleared);
+    }
+    function maybePromptPlacement(pl, stats, allCleared) {
+      if (!pl || allCleared || userProgress.liveUnlocked || stats.clearedCount > 0 || !currentUser || !window.__progressLoaded) return;
+      if (document.getElementById('placement-modal')) return;
+      const k = 'll_ask_' + currentUser.uid;
+      try { if (localStorage.getItem(k)) return; localStorage.setItem(k, '1'); } catch (e) { return; }
+      const m = document.createElement('div'); m.className = 'modal-back'; m.id = 'placement-modal';
+      m.innerHTML = `<div class="modal-card"><div style="font-size:2.5rem;">🕌</div><h3>ፊደላትን አስቀድመው ያውቃሉ?</h3>
+        <p style="color:#666;">ልዩ ፈተና ወስደው ካለፉ በቀጥታ ወደ ቁርኣን ክፍል መግባት ይችላሉ።</p>
+        <button class="btn" style="width:100%;margin-bottom:8px;" onclick="closePlacementModal();startLesson('${pl.id}')">አዎ፣ ፈተና ልውሰድ</button>
+        <button class="btn btn-outline" style="width:100%;" onclick="closePlacementModal()">አይ፣ ከመጀመሪያው ልጀምር</button></div>`;
+      document.body.appendChild(m);
+    }
+    function closePlacementModal() { const m = document.getElementById('placement-modal'); if (m) m.remove(); }
+
+    // Reminders: local notifications while the app is open/installed. (True closed-app push needs Firebase Cloud Messaging + a server.)
+    function getReminder() { try { return JSON.parse(localStorage.getItem('ll_reminder')) || { on: false, time: '18:00' }; } catch (e) { return { on: false, time: '18:00' }; } }
+    function setReminder(r) { try { localStorage.setItem('ll_reminder', JSON.stringify(r)); } catch (e) {} }
+    function initReminderUi() {
+      const r = getReminder();
+      document.getElementById('reminder-on').checked = r.on;
+      document.getElementById('reminder-time').value = r.time;
+      document.getElementById('reminder-note').innerText = ('Notification' in window) ? 'ማስታወሻው የሚደርሰው መተግበሪያው ክፍት ወይም በጀርባ ሲሆን ነው።' : 'ይህ መሳሪያ ማሳወቂያዎችን አይደግፍም።';
+    }
+    async function toggleReminder(on) {
+      const r = getReminder();
+      if (on) {
+        if (!('Notification' in window)) { alert('ይህ መሳሪያ ማሳወቂያዎችን አይደግፍም።'); on = false; }
+        else if ((await Notification.requestPermission()) !== 'granted') { alert('ማሳወቂያ አልተፈቀደም — በአሳሽ ቅንብር ውስጥ ይፍቀዱ።'); on = false; }
+      }
+      r.on = on; setReminder(r); initReminderUi();
+    }
+    function saveReminderTime(v) { const r = getReminder(); r.time = v || '18:00'; setReminder(r); }
+    function checkReminder() {
+      const r = getReminder();
+      if (!r.on || !currentUser || !('Notification' in window) || Notification.permission !== 'granted') return;
+      const n = new Date(), hm = String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0');
+      if (hm < r.time || userProgress.streakDates.includes(todayStr())) return;
+      let last = null; try { last = localStorage.getItem('ll_reminder_last'); } catch (e) {}
+      if (last === todayStr()) return;
+      try { localStorage.setItem('ll_reminder_last', todayStr()); } catch (e) {}
+      const body = userProgress.currentStreak > 0 ? `🔥 የ${userProgress.currentStreak} ቀን ተከታታይነትዎን ያቆዩ — ዛሬ ይማሩ!` : 'ዛሬ ለመማር ጊዜው ነው! 📖';
+      navigator.serviceWorker && navigator.serviceWorker.getRegistration().then(reg => {
+        if (reg) reg.showNotification('Letter Learner', { body, icon: 'icon-192.png' }); else new Notification('Letter Learner', { body });
+      }).catch(() => new Notification('Letter Learner', { body }));
+    }
+    setInterval(checkReminder, 30000);
 
     // --- ADMIN PANEL ---
     async function renderAdminPanel() {
@@ -2256,7 +2459,7 @@ const MASCOT_IMAGES = {
     }
 
     function onLessonTypeChange() {
-      const isMatching = document.getElementById('new-lesson-type').value === 'matching';
+      const isMatching = ['matching', 'placement'].includes(document.getElementById('new-lesson-type').value);
       document.getElementById('checkpoint-shuffle-fields').style.display = isMatching ? 'none' : 'block';
       if (isMatching) {
         document.getElementById('new-lesson-checkpoint').checked = false;
@@ -2268,16 +2471,16 @@ const MASCOT_IMAGES = {
       const lvlId = document.getElementById('lesson-level-select').value;
       const title = document.getElementById('new-lesson-title').value.trim();
       const type = document.getElementById('new-lesson-type').value;
-      const isCheckpoint = type === 'matching' ? false : document.getElementById('new-lesson-checkpoint').checked;
+      const isCheckpoint = (type === 'matching' || type === 'placement') ? false : document.getElementById('new-lesson-checkpoint').checked;
       const shuffleQuestions = document.getElementById('new-lesson-shuffle').checked;
       if (!title) return alert('Enter lesson title');
 
       if (id) {
-        appData.levels.forEach(l => { const les = l.lessons.find(s => s.id === id); if (les) { les.title = title; les.type = type; les.isCheckpoint = isCheckpoint; les.passThreshold = 85; les.shuffleQuestions = shuffleQuestions; } });
+        appData.levels.forEach(l => { const les = l.lessons.find(s => s.id === id); if (les) { les.title = title; les.type = type; les.isCheckpoint = isCheckpoint; les.passThreshold = (type === 'placement' ? 90 : 85); les.shuffleQuestions = shuffleQuestions; } });
       } else {
         if (!lvlId) return alert('Create a level first, then select it here.');
         const level = appData.levels.find(l => l.id === lvlId);
-        if (level) level.lessons.push({ id: uid('les'), title, type, isCheckpoint, passThreshold: 85, shuffleQuestions });
+        if (level) level.lessons.push({ id: uid('les'), title, type, isCheckpoint, passThreshold: (type === 'placement' ? 90 : 85), shuffleQuestions });
       }
       resetLessonForm();
       saveIndex().then(renderAdminPanel);
@@ -2289,7 +2492,7 @@ const MASCOT_IMAGES = {
       if (!foundLes) return;
       document.getElementById('edit-lesson-id').value = foundLes.id;
       document.getElementById('new-lesson-title').value = foundLes.title;
-      document.getElementById('new-lesson-type').value = foundLes.type === 'matching' ? 'matching' : 'quiz';
+      document.getElementById('new-lesson-type').value = (foundLes.type === 'matching' || foundLes.type === 'placement') ? foundLes.type : 'quiz';
       document.getElementById('new-lesson-checkpoint').checked = !!foundLes.isCheckpoint;
       document.getElementById('new-lesson-shuffle').checked = foundLes.shuffleQuestions !== false;
       onLessonTypeChange();
@@ -2345,6 +2548,7 @@ const MASCOT_IMAGES = {
       const symbol = document.getElementById('q-symbol').value.trim();
       const optionsRaw = document.getElementById('q-options').value;
       const correct = document.getElementById('q-correct').value.trim();
+      const goodTime = parseInt(document.getElementById('q-goodtime').value, 10) || 10;
       const imgFile = document.getElementById('q-image-file').files[0];
       const audioFile = document.getElementById('q-audio-file').files[0];
       const audioRemoved = document.getElementById('q-audio-removed').value === '1';
@@ -2380,7 +2584,7 @@ const MASCOT_IMAGES = {
         if (!existing) return alert("Couldn't find the original question to move — it may have been deleted elsewhere. Refresh and try again.");
 
         const updatedQuestion = {
-          ...existing, symbol, options, correct,
+          ...existing, symbol, options, correct, goodTime,
           img: imgBase64 !== null ? imgBase64 : existing.img,
           audio: audioBase64 !== null ? audioBase64 : existing.audio
         };
@@ -2405,7 +2609,7 @@ const MASCOT_IMAGES = {
       if (qId) {
         const q = questions.find(item => item.id === qId);
         if (q) {
-          q.symbol = symbol; q.options = options; q.correct = correct;
+          q.symbol = symbol; q.options = options; q.correct = correct; q.goodTime = goodTime;
           if (imgBase64 !== null) q.img = imgBase64;
           if (audioBase64 !== null) q.audio = audioBase64;
         }
@@ -2414,7 +2618,7 @@ const MASCOT_IMAGES = {
           id: uid('q'), symbol,
           img: imgBase64 !== null ? imgBase64 : (copySourceMedia ? copySourceMedia.img : ''),
           audio: audioBase64 !== null ? audioBase64 : (copySourceMedia ? copySourceMedia.audio : ''),
-          options, correct
+          options, correct, goodTime
         });
         copySourceMedia = null;
       }
@@ -2444,6 +2648,7 @@ const MASCOT_IMAGES = {
       document.getElementById('q-symbol').value = foundQ.symbol;
       document.getElementById('q-options').value = foundQ.options.join(', ');
       document.getElementById('q-correct').value = foundQ.correct;
+      document.getElementById('q-goodtime').value = foundQ.goodTime || '';
       copySourceMedia = { img: foundQ.img || '', audio: foundQ.audio || '' };
       document.getElementById('q-audio-removed').value = '';
       document.getElementById('q-image-current').innerText = foundQ.img ? 'Copied image will carry over (upload a new file to replace it)' : '';
@@ -2467,6 +2672,7 @@ const MASCOT_IMAGES = {
       document.getElementById('q-symbol').value = foundQ.symbol;
       document.getElementById('q-options').value = foundQ.options.join(', ');
       document.getElementById('q-correct').value = foundQ.correct;
+      document.getElementById('q-goodtime').value = foundQ.goodTime || '';
       document.getElementById('q-audio-removed').value = '';
       document.getElementById('q-image-current').innerText = foundQ.img ? 'Current: image attached (upload a new file to replace it)' : '';
       document.getElementById('q-audio-current').innerText = foundQ.audio ? 'Current: audio attached (upload a new file to replace it)' : '';
@@ -2484,6 +2690,7 @@ const MASCOT_IMAGES = {
       document.getElementById('q-symbol').value = '';
       document.getElementById('q-options').value = '';
       document.getElementById('q-correct').value = '';
+      document.getElementById('q-goodtime').value = '';
       document.getElementById('q-image-file').value = '';
       document.getElementById('q-audio-file').value = '';
       document.getElementById('q-image-current').innerText = '';
