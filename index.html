@@ -317,11 +317,11 @@
 </head>
 <body>
 
-  <div id="loading-view" class="loading-msg">🔤 Alif Quran Academy እየተጫነ ነው…</div>
+  <div id="loading-view" class="loading-msg">🇪🇹 Alif Quran Academy እየተጫነ ነው…</div>
 
   <div id="auth-view" class="auth-wrap" style="display:none;">
     <div class="auth-card">
-      <h1 style="color:var(--primary); margin-top:0;">🔤 Alif Quran Academy</h1>
+      <h1 style="color:var(--primary); margin-top:0;">🇪🇹 Alif Quran Academy</h1>
       <div class="auth-tabs">
         <div id="tab-login" class="auth-tab active" onclick="switchAuthTab('login')">ግባ</div>
         <div id="tab-signup" class="auth-tab" onclick="switchAuthTab('signup')">ተመዝገብ</div>
@@ -347,14 +347,13 @@
 
   <div id="app-root" style="display:none;">
     <header>
-      <h1 onclick="showView('student-home')">🔤 Alif Quran Academy</h1>
+      <h1 onclick="showView('student-home')">Alif Quran Academy 🇪🇹</h1>
       <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
         <div class="xp-badge" id="xp-badge">⚡ <span id="total-xp">0</span> XP</div>
         <button id="sound-toggle-btn" class="sound-toggle-btn" onclick="toggleSound()" title="ድምጽ">🔊</button>
-        <span id="user-email-label" style="font-size:0.8rem; color:#888;"></span>
+        <span id="user-email-label" style="display:none;"></span>
         <button id="teacher-mode-btn" class="btn btn-outline" style="display:none;" onclick="showView('teacher-view')">👨‍🏫 Teacher</button>
         <button id="admin-mode-btn" class="btn btn-outline" style="display:none;" onclick="showView('admin-view')">Admin</button>
-        <button class="btn btn-outline" onclick="doLogout()">ውጣ</button>
       </div>
     </header>
 
@@ -2812,5 +2811,3 @@ const MASCOT_IMAGES = {
   </script>
 </body>
 </html>
-
-
