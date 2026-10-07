@@ -531,6 +531,16 @@
     .completion-card .stat-val{color:var(--c2,#333);font-size:1.5rem;font-weight:900}
     .res-tile:nth-child(1){background:#E3F2FD}.res-tile:nth-child(2){background:#E8F5E9}.res-tile:nth-child(3){background:#FFF3E0}.res-tile:nth-child(4){background:#FCE4EC}
     .res-tile:nth-child(1) b{color:#1565C0}.res-tile:nth-child(2) b{color:#2E7D32}.res-tile:nth-child(3) b{color:#E65100}.res-tile:nth-child(4) b{color:#C2185B}
+      /* ===== PHASE 5: two-line top bar, 2-row palette ===== */
+    .live-top-bar { flex-direction: column; align-items: stretch; gap: 4px; }
+    .live-row { display: flex; align-items: center; gap: 6px; }
+    .live-appname { flex: 1; min-width: 0; font-weight: 800; font-size: 0.9rem; color: var(--primary-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .live-title { font-size: 0.85rem; }
+    body:not(.live-teacher) .teacher-only { display: none; }
+    .btn-icon.sm.muted { background: #FDE2E2; box-shadow: 0 2px 0 #F5A5A5; }
+    .bottom-palette { flex-direction: column; gap: 6px; padding: 8px 14px; border-radius: 26px; }
+    .pal-row { display: flex; gap: 10px; justify-content: center; }
+    body.live-teacher #quran-page-container { padding-bottom: 150px; }
   </style>
 </head>
 <body>
@@ -739,32 +749,42 @@
       </div>
 
       <div id="live-quran-view" class="view">
-        <!-- Slim top bar: small & low-key -->
         <div class="live-top-bar">
-          <button class="btn-icon sm" onclick="leaveLiveQuranView()" title="ውጣ">❌</button>
-          <button class="btn-icon sm audio-btn-icon" onclick="toggleAudioCall()" title="ድምጽ">🎤</button>
-          <div class="live-title"><span id="quran-page-title">ገጽ</span></div>
-          <span class="live-timer-mini"><span class="live-dot"></span><span id="quran-session-timer">00:00</span></span>
-          <div id="quran-teacher-controls" style="display:none; align-items:center; gap:4px;">
-            <button class="btn-icon sm" onclick="teacherChangePage(-1)">←</button>
-            <span id="quran-page-num-label" style="display:none;">1</span>
-            <button class="btn-icon sm" onclick="teacherChangePage(1)">→</button>
-            <button class="btn-icon sm btn-danger" onclick="endLiveSession()" title="ዝጋ">⏹</button>
+          <!-- Line 1: leave · app name · call · mute · timer -->
+          <div class="live-row">
+            <button class="btn-icon sm" onclick="leaveLiveQuranView()" title="ውጣ">❌</button>
+            <div class="live-appname">Alif Quran Academy 🇪🇹</div>
+            <button class="btn-icon sm audio-btn-icon" onclick="toggleAudioCall()" title="ድምጽ ጀምር / ዝጋ">🎤</button>
+            <button id="mute-btn" class="btn-icon sm" style="display:none;" onclick="toggleMute()" title="ድምጽ አጥፋ / አብራ">🎙️</button>
+            <span class="live-timer-mini"><span class="live-dot"></span><span id="quran-session-timer">00:00</span></span>
+          </div>
+          <!-- Line 2: surah + page (teacher also gets ← → ⏹) -->
+          <div class="live-row">
+            <button class="btn-icon sm teacher-only" onclick="teacherChangePage(-1)">←</button>
+            <div class="live-title"><span id="quran-page-title">ገጽ</span></div>
+            <button class="btn-icon sm teacher-only" onclick="teacherChangePage(1)">→</button>
+            <button class="btn-icon sm btn-danger teacher-only" onclick="endLiveSession()" title="ክፍለ ትምህርቱን ዝጋ">⏹</button>
           </div>
         </div>
+        <span id="quran-teacher-controls" style="display:none;"></span>
+        <span id="quran-page-num-label" style="display:none;">1</span>
         <span id="quran-session-student-label" style="display:none;"></span>
 
         <div id="quran-page-container"><p style="color:#999;">በመጫን ላይ…</p></div>
         <div id="quran-audio-container"></div>
 
-        <!-- Paint palette: bottom of the screen, teacher only. Eraser sits after the colours. -->
+        <!-- Palette (teacher only): tools on their own line, colours on the line below -->
         <div id="quran-palette" class="bottom-palette">
-          <div class="tajweed-pen selected" id="pen-hand" onclick="selectTajweedTool('hand')" title="Scroll">🖐️</div>
-          <div class="tajweed-pen" id="pen-point" onclick="selectTajweedTool('point')"><div class="pen-color" style="background:#2196F3;"></div></div>
-          <div class="tajweed-pen" id="pen-mistake" onclick="selectTajweedTool('mistake')"><div class="pen-color" style="background:#E53935;"></div></div>
-          <div class="tajweed-pen" id="pen-ghunnah" onclick="selectTajweedTool('ghunnah')"><div class="pen-color" style="background:#43A047;"></div></div>
-          <div class="tajweed-pen" id="pen-madd" onclick="selectTajweedTool('madd')"><div class="pen-color" style="background:#FB8C00;"></div></div>
-          <div class="tajweed-pen" id="pen-eraser" onclick="selectTajweedTool('eraser')" title="Eraser">🧹</div>
+          <div class="pal-row">
+            <div class="tajweed-pen selected" id="pen-hand" onclick="selectTajweedTool('hand')" title="Scroll">🖐️</div>
+            <div class="tajweed-pen" id="pen-eraser" onclick="selectTajweedTool('eraser')" title="Eraser">🧹</div>
+          </div>
+          <div class="pal-row">
+            <div class="tajweed-pen" id="pen-point" onclick="selectTajweedTool('point')"><div class="pen-color" style="background:#2196F3;"></div></div>
+            <div class="tajweed-pen" id="pen-mistake" onclick="selectTajweedTool('mistake')"><div class="pen-color" style="background:#E53935;"></div></div>
+            <div class="tajweed-pen" id="pen-ghunnah" onclick="selectTajweedTool('ghunnah')"><div class="pen-color" style="background:#43A047;"></div></div>
+            <div class="tajweed-pen" id="pen-madd" onclick="selectTajweedTool('madd')"><div class="pen-color" style="background:#FB8C00;"></div></div>
+          </div>
         </div>
       </div>
 
@@ -1371,8 +1391,7 @@
     function renderQuranPage(ayahs, marks, interactive) {
       const container = document.getElementById('quran-page-container');
       const firstSurah = (ayahs[0] && ayahs[0].surah && ayahs[0].surah.name) || '';
-      const surahShort = firstSurah.split(' ').filter((w, i) => !(i === 0 && w.replace(/[\u064B-\u065F\u0670]/g, '') === 'سورة')).join(' ');
-      document.getElementById('quran-page-title').innerText = `ገጽ ${liveSessionState.page} · ${surahShort}`;
+      document.getElementById('quran-page-title').innerText = `ገጽ ${liveSessionState.page} · ${firstSurah}`;
       const lockScroll = liveSessionState.isTeacher && currentTajweedTool !== 'hand';
       let html = `<div class="quran-page" style="touch-action: ${lockScroll ? 'none' : 'auto'}">`;
       ayahs.forEach(ayah => {
@@ -1446,16 +1465,47 @@
 
     // Free, no-signup audio room via public Jitsi Meet server. For a fully custom/branded
     // in-app call experience later, swap this for a Daily.co room + Cloud Function token.
-    function toggleAudioCall() {
+    let jitsiApi = null;
+    function loadJitsiApi() {
+      return new Promise((resolve, reject) => {
+        if (window.JitsiMeetExternalAPI) return resolve();
+        const sc = document.createElement('script');
+        sc.src = 'https://meet.jit.si/external_api.js';
+        sc.onload = resolve; sc.onerror = reject;
+        document.head.appendChild(sc);
+      });
+    }
+    function setMuteUi(muted) {
+      const b = document.getElementById('mute-btn');
+      b.textContent = muted ? '🔇' : '🎙️';
+      b.classList.toggle('muted', !!muted);
+    }
+    async function toggleAudioCall() {
       const box = document.getElementById('quran-audio-container');
       if (box.classList.contains('active')) { closeAudioCallUi(); return; }
       const room = `LetterLearnerQuran-${liveSessionState.studentUid}`;
-      box.innerHTML = `<iframe src="https://meet.jit.si/${room}#config.startAudioOnly=true&config.disableDeepLinking=true&interfaceConfig.SHOW_JITSI_WATERMARK=false" allow="microphone; autoplay; display-capture" allowfullscreen></iframe>`;
       box.classList.add('active');
+      try {
+        await loadJitsiApi();
+        jitsiApi = new JitsiMeetExternalAPI('meet.jit.si', {
+          roomName: room, parentNode: box, width: '100%', height: '100%',
+          configOverwrite: { startAudioOnly: true, disableDeepLinking: true, prejoinPageEnabled: false, prejoinConfig: { enabled: false } },
+          interfaceConfigOverwrite: { SHOW_JITSI_WATERMARK: false }
+        });
+        jitsiApi.addListener('audioMuteStatusChanged', (e) => setMuteUi(e.muted));
+        setMuteUi(false);
+        document.getElementById('mute-btn').style.display = 'flex';
+      } catch (e) {
+        // Fallback: plain embedded call (mute with the button inside the call window)
+        box.innerHTML = `<iframe src="https://meet.jit.si/${room}#config.startAudioOnly=true&config.disableDeepLinking=true&interfaceConfig.SHOW_JITSI_WATERMARK=false" allow="microphone; autoplay; display-capture" allowfullscreen></iframe>`;
+      }
     }
+    function toggleMute() { if (jitsiApi) jitsiApi.executeCommand('toggleAudio'); }
 
     function closeAudioCallUi() {
       const box = document.getElementById('quran-audio-container');
+      if (jitsiApi) { try { jitsiApi.dispose(); } catch (e) {} jitsiApi = null; }
+      document.getElementById('mute-btn').style.display = 'none';
       box.classList.remove('active');
       box.innerHTML = '';
     }
