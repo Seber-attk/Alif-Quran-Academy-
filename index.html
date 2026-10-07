@@ -268,6 +268,95 @@
     .path-sub-tag { font-size: 0.85rem; color: #6B7280; font-weight: 700; }
     .path-sub-tag.redo { font-size: 1rem; font-weight: 800; color: #1B6B45; background: #E3F6EA; border: 2px solid #B7E4C7; padding: 4px 16px; border-radius: 999px; box-shadow: 0 3px 0 #B7E4C7; margin-top: 4px; }
     /* --- end refreshed block --- */
+    /* ===== PHASE 3: maximize Quran space ===== */
+    /* --- MAXIMIZE QURAN SPACE: Hide old bulky headers --- */
+    .quran-session-header, .quran-teacher-controls-group, .quran-mark-legend {
+      display: none !important;
+    }
+
+    #quran-page-container {
+      margin-top: 10px;
+      padding-bottom: 95px; /* Leaves space so text isn't hidden behind the bottom dock */
+    }
+
+    /* Minimal Floating Timer (Top Right) */
+    .floating-timer {
+      position: fixed;
+      top: 70px; 
+      right: 16px;
+      background: rgba(0, 0, 0, 0.55);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      z-index: 100;
+    }
+
+    /* Unified Compact Bottom Dock */
+    .unified-bottom-dock {
+      position: fixed;
+      bottom: 16px;
+      left: 16px;
+      right: 16px;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      padding: 8px 12px;
+      border-radius: 24px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0,0,0,0.05);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 150;
+    }
+
+    /* Bottom Nav Circle Buttons */
+    .btn-icon {
+      background: #F3EFE6;
+      border: none;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.15rem;
+      cursor: pointer;
+      box-shadow: 0 3px 0 #D5CBB0;
+      flex-shrink: 0;
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .btn-icon:active { transform: translateY(3px); box-shadow: 0 1px 0 #D5CBB0; }
+
+    .audio-btn-icon { background: #E3F2FD; color: #1976D2; box-shadow: 0 3px 0 #90CAF9; }
+    .audio-btn-icon:active { box-shadow: 0 1px 0 #90CAF9; }
+
+    .btn-icon.btn-danger { background: #EF4444; color: white; box-shadow: 0 3px 0 #B91C1C; }
+    .btn-icon.btn-danger:active { box-shadow: 0 1px 0 #B91C1C; }
+
+    .page-label { font-weight: 800; font-size: 1rem; color: var(--primary-dark); }
+
+    /* Floating Thumb Palette */
+    .floating-teacher-palette {
+      position: fixed;
+      bottom: 85px; /* Hovers right above the bottom dock */
+      right: 16px;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      padding: 10px 8px;
+      border-radius: 30px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .unified-bottom-dock { bottom: calc(16px + env(safe-area-inset-bottom)); }
+
     /* Floating Teacher Thumb Palette */
     .floating-teacher-palette { position: fixed; bottom: 100px; right: 12px; background: rgba(255,255,255,0.92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); padding: 10px 8px; border-radius: 30px; box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 8px; z-index: 150; max-height: 68vh; overflow-y: auto; }
     .tajweed-pen { width: 42px; height: 42px; flex: 0 0 auto; border-radius: 50%; border: 3px solid transparent; background: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.15s ease, border-color 0.15s ease; font-size: 1.15rem; }
@@ -331,8 +420,8 @@
       box-shadow: 0 0 0 2px #E57373;
     }
     .quran-word.ghunnah {
-      background: #E1BEE7 !important; /* Purple: Ghunnah / Ikhfa */
-      box-shadow: 0 0 0 2px #BA68C8;
+      background: #C8E6C9 !important; /* Green: Ghunnah / Ikhfa */
+      box-shadow: 0 0 0 2px #81C784;
     }
     .quran-word.madd {
       background: #FFE0B2 !important; /* Orange: Madd / Prolongation */
@@ -639,43 +728,47 @@
       </div>
 
       <div id="live-quran-view" class="view">
-        <div class="quran-session-header">
-          <button class="btn btn-outline" style="background:rgba(255,255,255,0.15); color:white; border-color:rgba(255,255,255,0.4);" onclick="leaveLiveQuranView()">← ውጣ</button>
-          <div>
-            <div class="live-badge"><span class="live-dot"></span> LIVE · <span id="quran-session-timer">00:00</span></div>
-            <div class="who"><span id="quran-page-title">ገጽ</span> — <span id="quran-session-student-label"></span></div>
-          </div>
-          <button class="btn" style="background:white; color:var(--primary-dark);" onclick="toggleAudioCall()">🎤 ኦዲዮ</button>
+        
+        <!-- Minimal Floating Timer -->
+        <div class="floating-timer">
+          <span class="live-dot"></span> <span id="quran-session-timer">00:00</span>
         </div>
-        <div id="quran-teacher-controls" style="display:none; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
-          <div class="quran-teacher-controls-group">
-            <button class="btn btn-outline btn-sm" onclick="teacherChangePage(-1)">→ ቀዳሚ</button>
-            <span style="font-weight:800; font-size:0.9rem;">ገጽ <span id="quran-page-num-label">1</span> / 604</span>
-            <button class="btn btn-outline btn-sm" onclick="teacherChangePage(1)">ቀጣይ ←</button>
-            <div class="quran-controls-divider"></div>
-            <button class="btn btn-sm btn-outline" onclick="teacherClearMarks()">🧹 አጽዳ</button>
-            <div class="quran-controls-divider"></div>
-            <button class="btn btn-sm" style="background:var(--danger);" onclick="endLiveSession()">⏹ ዝጋ</button>
-          </div>
-          <div class="floating-teacher-palette">
-            <div class="tajweed-pen selected" id="pen-hand" onclick="selectTajweedTool('hand')" title="Scroll / Read">🖐️</div>
-            <div class="tajweed-pen" id="pen-point" onclick="selectTajweedTool('point')" title="Blue Point"><div class="pen-color" style="background:#2196F3;"></div></div>
-            <div class="tajweed-pen" id="pen-mistake" onclick="selectTajweedTool('mistake')" title="Red Mistake"><div class="pen-color" style="background:#E53935;"></div></div>
-            <div class="tajweed-pen" id="pen-good" onclick="selectTajweedTool('good')" title="Green Correct"><div class="pen-color" style="background:#43A047;"></div></div>
-            <div class="tajweed-pen" id="pen-ghunnah" onclick="selectTajweedTool('ghunnah')" title="Purple Ghunnah"><div class="pen-color" style="background:#8E24AA;"></div></div>
-            <div class="tajweed-pen" id="pen-madd" onclick="selectTajweedTool('madd')" title="Orange Madd"><div class="pen-color" style="background:#FB8C00;"></div></div>
-            <div class="tajweed-pen" id="pen-eraser" onclick="selectTajweedTool('eraser')" title="Eraser">🧹</div>
-          </div>
-        </div>
-        <div class="quran-mark-legend">
-          <span><span class="quran-mark-dot"></span> ጠቋሚ (ንካ)</span>
-          <span><span class="quran-mark-dot"></span> ስህተት</span>
-          <span><span class="quran-mark-dot"></span> ትክክል</span>
-          <span><span class="quran-mark-dot"></span> ጉናህ / ኢኽፋእ</span>
-          <span><span class="quran-mark-dot"></span> መድ</span>
-        </div>
+      
+        <div style="display:none;"><span id="quran-page-title"></span><span id="quran-session-student-label"></span></div>
+      
+        <!-- Quran Content (Stretches all the way up now) -->
         <div id="quran-page-container"><p style="color:#999;">በመጫን ላይ…</p></div>
         <div id="quran-audio-container"></div>
+      
+        <!-- Unified Bottom Bar -->
+        <div class="unified-bottom-dock">
+          
+          <!-- Shared Controls (Student & Teacher) -->
+          <button class="btn-icon" onclick="leaveLiveQuranView()" title="ውጣ">❌</button>
+          <button class="btn-icon audio-btn-icon" onclick="toggleAudioCall()" title="ድምጽ">🎤</button>
+          
+          <!-- Teacher Specific Controls (Hidden from students) -->
+          <div id="quran-teacher-controls" style="display:none; flex:1; justify-content:flex-end; align-items:center; gap:8px;">
+             <button class="btn-icon" onclick="teacherChangePage(-1)">←</button>
+             <span class="page-label"><span id="quran-page-num-label">1</span></span>
+             <button class="btn-icon" onclick="teacherChangePage(1)">→</button>
+             <button class="btn-icon btn-danger" onclick="endLiveSession()">⏹</button>
+             
+             <!-- Floating Paint Palette -->
+             <div class="floating-teacher-palette">
+                <div class="tajweed-pen selected" id="pen-hand" onclick="selectTajweedTool('hand')" title="Scroll">🖐️</div>
+                <div class="tajweed-pen" id="pen-point" onclick="selectTajweedTool('point')"><div class="pen-color" style="background:#2196F3;"></div></div>
+                <div class="tajweed-pen" id="pen-mistake" onclick="selectTajweedTool('mistake')"><div class="pen-color" style="background:#E53935;"></div></div>
+                <div class="tajweed-pen" id="pen-ghunnah" onclick="selectTajweedTool('ghunnah')"><div class="pen-color" style="background:#43A047;"></div></div>
+                
+                <!-- Eraser moved ABOVE Orange as requested -->
+                <div class="tajweed-pen" id="pen-eraser" onclick="selectTajweedTool('eraser')" title="Eraser">🧹</div>
+                
+                <!-- Orange at the bottom -->
+                <div class="tajweed-pen" id="pen-madd" onclick="selectTajweedTool('madd')"><div class="pen-color" style="background:#FB8C00;"></div></div>
+             </div>
+          </div>
+        </div>
       </div>
 
       <div id="teacher-view" class="view">
