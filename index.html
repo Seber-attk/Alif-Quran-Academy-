@@ -268,6 +268,12 @@
     .path-sub-tag { font-size: 0.85rem; color: #6B7280; font-weight: 700; }
     .path-sub-tag.redo { font-size: 1rem; font-weight: 800; color: #1B6B45; background: #E3F6EA; border: 2px solid #B7E4C7; padding: 4px 16px; border-radius: 999px; box-shadow: 0 3px 0 #B7E4C7; margin-top: 4px; }
     /* --- end refreshed block --- */
+    /* Floating Teacher Thumb Palette */
+    .floating-teacher-palette { position: fixed; bottom: 100px; right: 12px; background: rgba(255,255,255,0.92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); padding: 10px 8px; border-radius: 30px; box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 8px; z-index: 150; max-height: 68vh; overflow-y: auto; }
+    .tajweed-pen { width: 42px; height: 42px; flex: 0 0 auto; border-radius: 50%; border: 3px solid transparent; background: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.15s ease, border-color 0.15s ease; font-size: 1.15rem; }
+    .tajweed-pen:active { transform: scale(0.9); }
+    .tajweed-pen.selected { border-color: var(--primary); transform: scale(1.12); box-shadow: 0 6px 14px rgba(46,125,79,0.25); }
+    .pen-color { width: 22px; height: 22px; border-radius: 50%; }
     /* ===== PHASE 2: floating XP & Tajweed marking ===== */
     /* Floating XP Particle */
     .floating-xp-pill {
@@ -641,21 +647,24 @@
           </div>
           <button class="btn" style="background:white; color:var(--primary-dark);" onclick="toggleAudioCall()">🎤 ኦዲዮ</button>
         </div>
-        <div id="quran-teacher-controls" style="display:none; flex-direction:column; gap:10px; margin-bottom:14px;">
+        <div id="quran-teacher-controls" style="display:none; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
           <div class="quran-teacher-controls-group">
-            <button class="btn btn-outline btn-sm" onclick="teacherChangePage(-1)">→ ቀዳሚ ገጽ</button>
+            <button class="btn btn-outline btn-sm" onclick="teacherChangePage(-1)">→ ቀዳሚ</button>
             <span style="font-weight:800; font-size:0.9rem;">ገጽ <span id="quran-page-num-label">1</span> / 604</span>
-            <button class="btn btn-outline btn-sm" onclick="teacherChangePage(1)">ቀጣይ ገጽ ←</button>
-            <button class="btn btn-sm btn-outline" onclick="teacherClearMarks()" style="margin-left:auto;">🧹 አጽዳ</button>
+            <button class="btn btn-outline btn-sm" onclick="teacherChangePage(1)">ቀጣይ ←</button>
+            <div class="quran-controls-divider"></div>
+            <button class="btn btn-sm btn-outline" onclick="teacherClearMarks()">🧹 አጽዳ</button>
+            <div class="quran-controls-divider"></div>
             <button class="btn btn-sm" style="background:var(--danger);" onclick="endLiveSession()">⏹ ዝጋ</button>
           </div>
-          <div class="tajweed-palette-bar">
-            <span style="font-size:0.75rem; font-weight:800; color:#777;">ምልክት ይምረጡ:</span>
-            <button type="button" class="tajweed-btn selected" id="tajweed-tool-point" onclick="selectTajweedTool('point')"><span class="tajweed-dot" style="background:#2196F3;"></span> ጠቋሚ</button>
-            <button type="button" class="tajweed-btn" id="tajweed-tool-mistake" onclick="selectTajweedTool('mistake')"><span class="tajweed-dot" style="background:#E53935;"></span> ስህተት</button>
-            <button type="button" class="tajweed-btn" id="tajweed-tool-good" onclick="selectTajweedTool('good')"><span class="tajweed-dot" style="background:#43A047;"></span> ትክክል</button>
-            <button type="button" class="tajweed-btn" id="tajweed-tool-ghunnah" onclick="selectTajweedTool('ghunnah')"><span class="tajweed-dot" style="background:#8E24AA;"></span> ጉናህ / ኢኽፋእ</button>
-            <button type="button" class="tajweed-btn" id="tajweed-tool-madd" onclick="selectTajweedTool('madd')"><span class="tajweed-dot" style="background:#FB8C00;"></span> መድ (ማራዘም)</button>
+          <div class="floating-teacher-palette">
+            <div class="tajweed-pen selected" id="pen-hand" onclick="selectTajweedTool('hand')" title="Scroll / Read">🖐️</div>
+            <div class="tajweed-pen" id="pen-point" onclick="selectTajweedTool('point')" title="Blue Point"><div class="pen-color" style="background:#2196F3;"></div></div>
+            <div class="tajweed-pen" id="pen-mistake" onclick="selectTajweedTool('mistake')" title="Red Mistake"><div class="pen-color" style="background:#E53935;"></div></div>
+            <div class="tajweed-pen" id="pen-good" onclick="selectTajweedTool('good')" title="Green Correct"><div class="pen-color" style="background:#43A047;"></div></div>
+            <div class="tajweed-pen" id="pen-ghunnah" onclick="selectTajweedTool('ghunnah')" title="Purple Ghunnah"><div class="pen-color" style="background:#8E24AA;"></div></div>
+            <div class="tajweed-pen" id="pen-madd" onclick="selectTajweedTool('madd')" title="Orange Madd"><div class="pen-color" style="background:#FB8C00;"></div></div>
+            <div class="tajweed-pen" id="pen-eraser" onclick="selectTajweedTool('eraser')" title="Eraser">🧹</div>
           </div>
         </div>
         <div class="quran-mark-legend">
@@ -1227,6 +1236,7 @@
       if (unsubLiveSession) unsubLiveSession();
       unsubLiveSession = fb.onSnapshot(fb.doc(fb.db, 'liveSessions', studentUid), async (snap) => {
         if (!snap.exists() || !snap.data().active) return;
+        if (liveSessionState.isTeacher && (isPainting || pendingMarks)) return; // keep the stroke in progress
         const data = snap.data();
         if (!sessionTimerInterval) startSessionTimer(data.startedAt);
         const pageChanged = data.page !== liveSessionState.page;
@@ -1269,13 +1279,14 @@
       const container = document.getElementById('quran-page-container');
       const firstSurah = (ayahs[0] && ayahs[0].surah && ayahs[0].surah.name) || '';
       document.getElementById('quran-page-title').innerText = `${firstSurah} — ገጽ ${liveSessionState.page}`;
-      let html = '<div class="quran-page">';
+      const lockScroll = liveSessionState.isTeacher && currentTajweedTool !== 'hand';
+      let html = `<div class="quran-page" style="touch-action: ${lockScroll ? 'none' : 'auto'}">`;
       ayahs.forEach(ayah => {
         const words = ayah.text.split(' ').filter(Boolean);
         words.forEach((w, i) => {
           const loc = `${ayah.number}-${i}`;
           const markType = marks[loc] || '';
-          html += `<span class="quran-word ${markType}" ${interactive ? `onclick="teacherToggleMark('${loc}')"` : ''} data-loc="${loc}">${w}</span> `;
+          html += `<span class="quran-word ${markType}" data-loc="${loc}">${w}</span> `;
         });
         html += `<span class="quran-ayah-end">﴾${ayah.numberInSurah}﴿</span> `;
       });
@@ -1283,19 +1294,51 @@
       container.innerHTML = html;
     }
 
-    let tajweedTool = 'point';
+    // ---- Swipe-to-paint engine (teacher) ----
+    let currentTajweedTool = 'hand'; // default: scroll/read
+    let isPainting = false;
+    let pendingMarks = false;
+
     function selectTajweedTool(tool) {
-      tajweedTool = tool;
-      document.querySelectorAll('.tajweed-btn').forEach(b => b.classList.toggle('selected', b.id === 'tajweed-tool-' + tool));
+      currentTajweedTool = tool;
+      document.querySelectorAll('.tajweed-pen').forEach(b => b.classList.remove('selected'));
+      const pen = document.getElementById('pen-' + tool); if (pen) pen.classList.add('selected');
+      const page = document.querySelector('.quran-page');
+      if (page) page.style.touchAction = (liveSessionState.isTeacher && tool !== 'hand') ? 'none' : 'auto';
     }
 
-    function teacherToggleMark(loc) {
-      if (!liveSessionState.isTeacher) return;
-      const cur = liveSessionState.marks[loc] || '';
-      const marks = { ...liveSessionState.marks };
-      if (cur === tajweedTool) delete marks[loc]; else marks[loc] = tajweedTool; // tap again with the same tool to remove
-      fb.setDoc(fb.doc(fb.db, 'liveSessions', liveSessionState.studentUid), { marks }, { merge: true });
+    function paintWord(el) {
+      if (!liveSessionState.isTeacher || currentTajweedTool === 'hand' || !el || !el.classList || !el.classList.contains('quran-word')) return;
+      const loc = el.getAttribute('data-loc'); if (!loc) return;
+      const target = currentTajweedTool === 'eraser' ? '' : currentTajweedTool;
+      if ((liveSessionState.marks[loc] || '') === target) return;
+      if (target === '') { delete liveSessionState.marks[loc]; el.className = 'quran-word'; }
+      else { liveSessionState.marks[loc] = target; el.className = 'quran-word ' + target; }
+      pendingMarks = true;
     }
+
+    function syncQuranMarks() {
+      if (!liveSessionState.isTeacher || !pendingMarks) return;
+      pendingMarks = false;
+      // mergeFields replaces the whole marks map, so erased words really disappear
+      fb.setDoc(fb.doc(fb.db, 'liveSessions', liveSessionState.studentUid), { marks: liveSessionState.marks }, { mergeFields: ['marks'] });
+    }
+
+    (function initQuranPainting() {
+      const box = document.getElementById('quran-page-container');
+      const stop = () => { if (isPainting) { isPainting = false; syncQuranMarks(); } };
+      box.addEventListener('mousedown', (e) => { isPainting = true; paintWord(e.target); });
+      box.addEventListener('mouseover', (e) => { if (isPainting) paintWord(e.target); });
+      window.addEventListener('mouseup', stop);
+      box.addEventListener('touchstart', (e) => { isPainting = true; paintWord(e.target); }, { passive: true });
+      box.addEventListener('touchmove', (e) => {
+        if (!isPainting || currentTajweedTool === 'hand') return;
+        const t = e.touches[0];
+        paintWord(document.elementFromPoint(t.clientX, t.clientY));
+      }, { passive: true });
+      window.addEventListener('touchend', stop);
+      window.addEventListener('touchcancel', stop);
+    })();
 
     function teacherClearMarks() {
       fb.setDoc(fb.doc(fb.db, 'liveSessions', liveSessionState.studentUid), { marks: {} }, { merge: true });
