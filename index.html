@@ -26,7 +26,7 @@
       --card-bg: #FFFFFF;
       --text: #2B2B28;
       --font-sans: 'Nunito', 'Segoe UI', Tahoma, sans-serif;
-      --font-arabic: 'Amiri', 'Traditional Arabic', serif;
+      --font-arabic: 'KFGQPC Uthmanic Script HAFS', 'Amiri', 'Traditional Arabic', serif;
     }
     * { box-sizing: border-box; font-family: var(--font-sans); }
     body { background: var(--bg); color: var(--text); margin: 0; padding: 0; min-height: 100vh; display: flex; flex-direction: column; }
@@ -218,12 +218,11 @@
     .quran-controls-divider { width: 1px; align-self: stretch; background: #e0dccb; margin: 0 4px; }
 
     .quran-page-nav { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
-    .quran-page { background:#fffdf5; border:1px solid #ecdfb8; border-radius:16px; padding:26px 20px; direction:rtl; text-align:right; font-family:var(--font-arabic); font-size:1.7rem; line-height:2.7; box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 10px 24px rgba(163,130,50,0.12), inset 0 0 0 6px #fffef9; }
-    .quran-word { display:inline-block; padding:2px 3px; border-radius:6px; cursor:pointer; }
+    .quran-page { background:#fffdf5; border:1px solid #ecdfb8; border-radius:16px; padding:26px 20px; direction:rtl; text-align:justify; font-family:var(--font-arabic); font-size:1.7rem; line-height:2.3; box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 10px 24px rgba(163,130,50,0.12), inset 0 0 0 6px #fffef9; }
+    .quran-word { display:inline; border-radius:6px; cursor:pointer; }
     .quran-word.point { background:#BBDEFB; }
     .quran-word.mistake { background:#FFCDD2; }
     .quran-word.good { background:#C8E6C9; }
-    .quran-ayah-end { color:var(--gold); font-size:1.1rem; margin:0 4px; }
     .quran-mark-legend { display:flex; gap:10px; flex-wrap:wrap; margin:14px 0; }
     .quran-mark-legend span { display:inline-flex; align-items:center; gap:7px; font-size:0.8rem; font-weight:700; color:#555; background:#fff; padding:6px 12px; border-radius:20px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
     .quran-mark-dot { width:11px; height:11px; border-radius:50%; display:inline-block; }
@@ -410,14 +409,10 @@
 
     /* Expanded Tajweed & Quran Recitation Word Marking */
     .quran-word {
-      display: inline-block;
-      padding: 2px 4px;
-      border-radius: 8px;
+      display: inline; /* Natural Arabic flow */
       cursor: pointer;
-      transition: background-color 0.15s ease, transform 0.1s ease;
-    }
-    .quran-word:hover {
-      transform: scale(1.05);
+      border-radius: 6px;
+      transition: background-color 0.15s ease;
     }
 
     .quran-word.point {
@@ -673,21 +668,6 @@
     .dock-timer { display: flex; align-items: center; gap: 6px; font-weight: 800; color: #4B5563; font-size: 0.95rem; }
     .dock-timer .live-dot { background: #EF4444; width: 10px; height: 10px; }
 
-    /* 5. Golden Verse Medallions */
-    .quran-ayah-end {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      color: #2B2B28;
-      font-family: var(--font-sans);
-      font-size: 0.9rem;
-      font-weight: 900;
-      width: 36px; height: 36px;
-      background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M50 5 L62 25 L85 25 L75 45 L85 70 L62 60 L50 85 L38 60 L15 70 L25 45 L15 25 L38 25 Z" fill="%23FFFDF7" stroke="%23C89B3C" stroke-width="6" stroke-linejoin="round"/></svg>') center/contain no-repeat;
-      margin: 0 6px;
-      transform: translateY(-4px);
-    }
-
     body.live-teacher #quran-page-container { padding-bottom: 180px; padding-top: 80px; }
     body:not(.live-teacher) #quran-page-container { padding-bottom: 40px; padding-top: 80px; }
 
@@ -700,20 +680,19 @@
     .premium-top-bar .live-appname { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem; }
     #mushaf-btn.on { background: #1B5E3A !important; color: #fff !important; }
 
-      /* ===== Round green-and-gold verse medallion (Arabic digits) ===== */
+    /* ===== Round double-ring verse medallion (Arabic digits) ===== */
     .quran-ayah-end { 
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 38px; 
-      height: 38px; 
-      font-family: var(--font-sans); 
-      font-size: 0.9rem; 
-      font-weight: 900; 
-      color: #2B2B28; 
-      background: url("data:image/svg+xml;utf8,<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><path d='M50 5 L62 25 L85 25 L75 45 L85 70 L62 60 L50 85 L38 60 L15 70 L25 45 L15 25 L38 25 Z' fill='%23FFFDF7' stroke='%23C89B3C' stroke-width='6' stroke-linejoin='round'/></svg>") center/contain no-repeat; 
+      width: 36px; 
+      height: 36px; 
+      font-family: var(--font-arabic); 
+      font-size: 1.1rem; 
+      font-weight: bold; 
+      color: var(--primary-dark); 
+      background: url("data:image/svg+xml;utf8,<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><circle cx='50' cy='50' r='42' fill='%23FFFDF7' stroke='%23C89B3C' stroke-width='5'/><circle cx='50' cy='50' r='34' fill='none' stroke='%23C89B3C' stroke-width='1.5' stroke-dasharray='3 3'/></svg>") center/contain no-repeat; 
       margin: 0 6px; 
-      transform: translateY(-4px); 
     }
   </style>
 </head>
