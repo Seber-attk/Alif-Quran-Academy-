@@ -588,6 +588,12 @@
       gap: 12px; 
     }
     body.live-teacher .teacher-bottom-dock { display: flex; }
+      /* ===== PHASE 7: compact dock, purple pen ===== */
+    body:not(.live-teacher) .teacher-only { display: none !important; }
+    body.live-teacher .student-only { display: none !important; }
+    .teacher-bottom-dock { padding: 10px 14px; gap: 8px; }
+    body.live-teacher #quran-page-container { padding-bottom: 135px; }
+    .quran-word.stumble { background: #E1BEE7 !important; box-shadow: 0 0 0 2px #BA68C8; }
   </style>
 </head>
 <body>
@@ -796,52 +802,46 @@
       </div>
 
       <div id="live-quran-view" class="view">
-        
-        <!-- 1. Ultra-Slim Top Bar -->
+
+        <!-- 1. Slim top bar: leave · app name · call · mute · (teacher: end session | student: timer) -->
         <div class="live-top-bar">
           <button class="btn-icon sm" onclick="leaveLiveQuranView()" title="ውጣ">❌</button>
           <div class="live-appname">Alif Quran Academy 🇪🇹</div>
           <div style="display:flex; gap:6px; align-items:center;">
             <button class="btn-icon sm audio-btn-icon" onclick="toggleAudioCall()" title="ድምጽ">🎤</button>
             <button id="mute-btn" class="btn-icon sm" style="display:none;" onclick="toggleMute()" title="ድምጽ አጥፋ">🎙️</button>
-            <span class="live-timer-mini"><span class="live-dot"></span><span id="quran-session-timer">00:00</span></span>
+            <button class="btn-icon sm btn-danger teacher-only" onclick="endLiveSession()" title="ክፍለ ትምህርቱን ዝጋ">⏹</button>
+            <span class="live-timer-mini student-only"><span class="live-dot"></span><span id="quran-session-timer" class="session-timer-text">00:00</span></span>
           </div>
         </div>
-      
-        <!-- 2. Scrolling Quran Content -->
+
+        <!-- 2. Scrolling Quran content -->
         <div id="quran-page-container" style="text-align:center;">
           <p style="color:#999; margin-top:40px;">በመጫን ላይ…</p>
         </div>
         <div id="quran-audio-container"></div>
         <span id="quran-session-student-label" style="display:none;"></span>
-      
-        <!-- 3. Teacher's Unified Bottom Dock -->
+
+        <!-- 3. Teacher dock: line 1 = pages · timer · eraser, line 2 = pens -->
         <div id="quran-teacher-controls" class="teacher-bottom-dock">
-          
-          <!-- Top Row: Page Navigation & Stop Session -->
-          <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; border-bottom:1px solid #E5E7EB;">
-            <div style="display:flex; align-items:center; gap:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <div style="display:flex; align-items:center; gap:10px;">
               <button class="btn-icon sm" onclick="teacherChangePage(-1)">←</button>
-              <span style="font-weight:800; font-size:1rem; color:#4B5563;">ገጽ <span id="quran-page-num-label">1</span></span>
+              <span style="font-weight:800; font-size:0.95rem; color:#4B5563;">ገጽ <span id="quran-page-num-label">1</span></span>
               <button class="btn-icon sm" onclick="teacherChangePage(1)">→</button>
             </div>
-            <button class="btn-icon sm btn-danger" onclick="endLiveSession()" title="ክፍለ ትምህርቱን ዝጋ">⏹</button>
+            <span class="live-timer-mini"><span class="live-dot"></span><span class="session-timer-text">00:00</span></span>
+            <div class="tajweed-pen" id="pen-eraser" onclick="selectTajweedTool('eraser')" title="Eraser" style="width:40px; height:40px;">🧹</div>
           </div>
-          
-          <!-- Bottom Row: Sketching Tools & Eraser Above Orange -->
-          <div style="display:flex; justify-content:space-between; align-items:center; padding: 0 10px; margin-top:44px;">
+
+          <div style="display:flex; justify-content:space-between; align-items:center; padding: 0 6px;">
             <div class="tajweed-pen selected" id="pen-hand" onclick="selectTajweedTool('hand')">🖐️</div>
             <div class="tajweed-pen" id="pen-point" onclick="selectTajweedTool('point')"><div class="pen-color" style="background:#2196F3;"></div></div>
             <div class="tajweed-pen" id="pen-mistake" onclick="selectTajweedTool('mistake')"><div class="pen-color" style="background:#E53935;"></div></div>
             <div class="tajweed-pen" id="pen-ghunnah" onclick="selectTajweedTool('ghunnah')"><div class="pen-color" style="background:#43A047;"></div></div>
-            
-            <!-- Orange Pen with Eraser floating directly above it -->
-            <div style="position:relative; display:flex; justify-content:center;">
-              <div class="tajweed-pen" id="pen-eraser" onclick="selectTajweedTool('eraser')" style="position:absolute; top:-52px; width:40px; height:40px; font-size:1.1rem; box-shadow: 0 6px 16px rgba(0,0,0,0.15);">🧹</div>
-              <div class="tajweed-pen" id="pen-madd" onclick="selectTajweedTool('madd')"><div class="pen-color" style="background:#FB8C00;"></div></div>
-            </div>
+            <div class="tajweed-pen" id="pen-madd" onclick="selectTajweedTool('madd')"><div class="pen-color" style="background:#FB8C00;"></div></div>
+            <div class="tajweed-pen" id="pen-stumble" onclick="selectTajweedTool('stumble')" title="Hesitation"><div class="pen-color" style="background:#8E24AA;"></div></div>
           </div>
-      
         </div>
       </div>
 
@@ -1334,12 +1334,12 @@
 
     function startSessionTimer(startedAt) {
       stopSessionTimer();
-      const label = document.getElementById('quran-session-timer');
+      const labels = document.querySelectorAll('.session-timer-text');
       const tick = () => {
         const secs = Math.max(0, Math.floor((Date.now() - (startedAt || Date.now())) / 1000));
         const m = String(Math.floor(secs / 60)).padStart(2, '0');
         const s = String(secs % 60).padStart(2, '0');
-        label.innerText = `${m}:${s}`;
+        labels.forEach(l => { l.innerText = `${m}:${s}`; });
       };
       tick();
       sessionTimerInterval = setInterval(tick, 1000);
