@@ -219,7 +219,7 @@
     .quran-controls-divider { width: 1px; align-self: stretch; background: #e0dccb; margin: 0 4px; }
 
     .quran-page-nav { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
-    .quran-page { background:#fffdf5; border:1px solid #ecdfb8; border-radius:16px; padding:26px 20px; direction:rtl; text-align:right; word-spacing:0.12em; font-family:var(--font-arabic); font-size:1.85rem; line-height:2.5; box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 10px 24px rgba(163,130,50,0.12), inset 0 0 0 6px #fffef9; }
+    .quran-page { background:#fffdf5; border:1px solid #ecdfb8; border-radius:16px; padding:26px 20px; direction:rtl; text-align:right; word-spacing:-0.12em; font-family:var(--font-arabic); font-size:1.75rem; line-height:2.1; box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 10px 24px rgba(163,130,50,0.12), inset 0 0 0 6px #fffef9; }
     .quran-word { display:inline; border-radius:6px; cursor:pointer; }
     .quran-word.point { background:#BBDEFB; }
     .quran-word.mistake { background:#FFCDD2; }
@@ -686,17 +686,21 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 46px; 
-      height: 46px; 
+      width: 42px; 
+      height: 42px; 
       font-family: var(--font-arabic); 
-      font-size: 1.15rem; 
+      font-size: 1.05rem; 
       font-weight: bold; 
       line-height: 1;
       color: #2B2B28; 
       background: url("data:image/svg+xml;utf8,<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><path d='M50 1 C57 13 68 17 84 20 C93 29 98 40 98 50 C98 60 93 71 84 80 C68 83 57 87 50 99 C43 87 32 83 16 80 C7 71 2 60 2 50 C2 40 7 29 16 20 C32 17 43 13 50 1 Z' fill='%23D9B35A' stroke='%238A6A1E' stroke-width='3' stroke-linejoin='round'/><path d='M50 8 C56 17 66 21 79 24 C87 31 91 40 91 50 C91 60 87 69 79 76 C66 79 56 83 50 92 C44 83 34 79 21 76 C13 69 9 60 9 50 C9 40 13 31 21 24 C34 21 44 17 50 8 Z' fill='none' stroke='%23FFF1C2' stroke-width='1.5'/><circle cx='50' cy='50' r='33' fill='%23FFFDF7' stroke='%231F7A4D' stroke-width='9'/><circle cx='50' cy='50' r='38.5' fill='none' stroke='%238A6A1E' stroke-width='1.5'/><circle cx='50' cy='50' r='27.5' fill='none' stroke='%238A6A1E' stroke-width='1.2'/><circle cx='50' cy='11' r='4.5' fill='%23D32F2F' stroke='%238A6A1E' stroke-width='1.2'/><circle cx='50' cy='89' r='4.5' fill='%23D32F2F' stroke='%238A6A1E' stroke-width='1.2'/></svg>") center/contain no-repeat; 
-      margin: 0 4px; 
+      margin: 0 3px; 
       vertical-align: middle;
     }
+    /* Number is nudged up (-0.3em) because Amiri digits sit low; smaller for 2 and 3 digits */
+    .quran-ayah-end .n { position: relative; top: -0.3em; line-height: 1; }
+    .quran-ayah-end.len2 { font-size: 0.88rem; }
+    .quran-ayah-end.len3 { font-size: 0.7rem; }
   </style>
 </head>
 <body>
@@ -1603,17 +1607,32 @@ unsubLiveSession = fb.onSnapshot(fb.doc(fb.db, 'liveSessions', studentUid), asyn
       if (!TAJWEED_MARKS_ONLY || !/\p{Mn}/u.test(t)) return `<span style="color:${color}">${t}</span>`;
       return t.replace(/\p{Mn}+/gu, (mm) => `<span style="color:${color}">${mm}</span>`);
     }
+    // Colour for every harakah, so the page is colourful like a printed tajweed Mushaf.
+    // (Where a tajweed rule applies, the rule colour above is used instead.)
+    const HARAKAT_COLORS = {
+      '\u064E': '#C47F00', '\u064B': '#C47F00', '\u0670': '#C47F00',   // fatha, fathatan, dagger alif  = gold
+      '\u0650': '#2F6FD6', '\u064D': '#2F6FD6',                         // kasra, kasratan               = blue
+      '\u064F': '#B0306A', '\u064C': '#B0306A',                         // damma, dammatan               = magenta
+      '\u0652': '#1E8E5A',                                              // sukun                         = green
+      '\u0651': '#8E44AD',                                              // shadda                        = purple
+      '\u0653': '#E5632B'                                               // maddah                        = orange
+    };
+    const HARAKAT_COLORS_ON = true;
+    function harakatColorize(t) {
+      if (!HARAKAT_COLORS_ON) return t;
+      return t.replace(/\p{Mn}/gu, (ch) => HARAKAT_COLORS[ch] ? `<span style="color:${HARAKAT_COLORS[ch]}">${ch}</span>` : ch);
+    }
     function tajweedHtml(w) {
       // Strip stray Latin letters, digits and colons that leak from the API, plus any brackets.
       const clean = (t) => t.replace(/[a-zA-Z0-9:]/g, '').replace(/[\[\]]/g, '');
       let out = '', last = 0, m;
       const re = /\[([a-z])[^\[]*\[([^\]]*)\]/gi;
       while ((m = re.exec(w)) !== null) {
-        out += clean(w.slice(last, m.index));
+        out += harakatColorize(clean(w.slice(last, m.index)));
         out += tajweedColorize(clean(m[2]), TAJWEED_COLORS[m[1].toLowerCase()]);
         last = re.lastIndex;
       }
-      return out + clean(w.slice(last));
+      return out + harakatColorize(clean(w.slice(last)));
     }
     const toArabicDigits = (n) => String(n).replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
 
@@ -1687,7 +1706,7 @@ unsubLiveSession = fb.onSnapshot(fb.doc(fb.db, 'liveSessions', studentUid), asyn
             const markType = marks[loc] || '';
             html += `<span class="quran-word ${markType}" data-loc="${loc}">${tajweedHtml(w)}</span> `;
           });
-          html += `<span class="quran-ayah-end">${toArabicDigits(ayah.numberInSurah)}</span> `;
+          html += `<span class="quran-ayah-end len${String(ayah.numberInSurah).length}"><span class="n">${toArabicDigits(ayah.numberInSurah)}</span></span> `;
         });
         html += '</div>';
       }
