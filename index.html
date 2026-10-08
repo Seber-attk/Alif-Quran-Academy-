@@ -701,7 +701,20 @@
     #mushaf-btn.on { background: #1B5E3A !important; color: #fff !important; }
 
       /* ===== Round green-and-gold verse medallion (Arabic digits) ===== */
-    .quran-ayah-end { width: 40px; height: 40px; font-family: var(--font-arabic), var(--font-sans); font-size: 1.05rem; font-weight: 800; color: #2B2B28; background: url("data:image/svg+xml;utf8,<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><circle cx='50' cy='50' r='47' fill='%23D9B35A' stroke='%238A6A1E' stroke-width='3'/><circle cx='50' cy='50' r='39' fill='%23FFFDF7' stroke='%231F6B43' stroke-width='8'/><circle cx='50' cy='50' r='30' fill='%23FFFDF7' stroke='%23C9A24B' stroke-width='2'/><circle cx='50' cy='7' r='4' fill='%23D32F2F'/><circle cx='50' cy='93' r='4' fill='%23D32F2F'/></svg>") center/contain no-repeat; margin: 0 6px; transform: translateY(-3px); }
+    .quran-ayah-end { 
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px; 
+      height: 38px; 
+      font-family: var(--font-sans); 
+      font-size: 0.9rem; 
+      font-weight: 900; 
+      color: #2B2B28; 
+      background: url("data:image/svg+xml;utf8,<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><path d='M50 5 L62 25 L85 25 L75 45 L85 70 L62 60 L50 85 L38 60 L15 70 L25 45 L15 25 L38 25 Z' fill='%23FFFDF7' stroke='%23C89B3C' stroke-width='6' stroke-linejoin='round'/></svg>") center/contain no-repeat; 
+      margin: 0 6px; 
+      transform: translateY(-4px); 
+    }
   </style>
 </head>
 <body>
@@ -948,13 +961,17 @@
           <div class="dock-row">
             <div class="tajweed-pen selected" id="pen-hand" onclick="selectTajweedTool('hand')">🖐️</div>
             <div class="v-divider"></div>
+
+            <!-- Eraser neatly inline -->
+            <div class="tajweed-pen" id="pen-eraser" onclick="selectTajweedTool('eraser')" title="Eraser">🧹</div>
+            <div class="v-divider"></div>
+
+            <!-- Color Pens -->
             <div class="tajweed-pen" id="pen-point" onclick="selectTajweedTool('point')"><div class="pen-color" style="background:#2196F3;"></div></div>
             <div class="tajweed-pen" id="pen-mistake" onclick="selectTajweedTool('mistake')"><div class="pen-color" style="background:#E53935;"></div></div>
             <div class="tajweed-pen" id="pen-ghunnah" onclick="selectTajweedTool('ghunnah')"><div class="pen-color" style="background:#43A047;"></div></div>
             <div class="tajweed-pen" id="pen-madd" onclick="selectTajweedTool('madd')"><div class="pen-color" style="background:#FB8C00;"></div></div>
             <div class="tajweed-pen" id="pen-stumble" onclick="selectTajweedTool('stumble')" title="Hesitation"><div class="pen-color" style="background:#8E24AA;"></div></div>
-            <div class="v-divider" style="background:#D1D5DB;"></div>
-            <div class="tajweed-pen" id="pen-eraser" onclick="selectTajweedTool('eraser')">🧹</div>
           </div>
       
         </div>
@@ -1597,21 +1614,53 @@ unsubLiveSession = fb.onSnapshot(fb.doc(fb.db, 'liveSessions', studentUid), asyn
     // Tajweed colours (alquran.cloud rule letters). Text looks like: [h:1[ٱ]للَّهِ [n[ـٰ]نِ
     const TAJWEED_COLORS = { h:'#AAAAAA', s:'#AAAAAA', l:'#AAAAAA', n:'#537FFF', p:'#4050FF', m:'#000EBC', o:'#2144C1', q:'#DD0008', c:'#D500B7', f:'#9400A8', w:'#58B800', i:'#26BFFD', a:'#169777', u:'#169200', d:'#A1A1A1', b:'#A1A1A1', g:'#FF7E1E' };
     function tajweedHtml(w) {
-      return w.replace(/\[([a-z])(?::\d+)?\[([^\]]*)\]/g, (m, c, t) => `<span style="color:${TAJWEED_COLORS[c] || 'inherit'}">${t}</span>`).replace(/[\[\]]/g, '');
+      // Strip stray Latin letters, digits and colons that leak from the API, plus any brackets.
+      const clean = (t) => t.replace(/[a-zA-Z0-9:]/g, '').replace(/[\[\]]/g, '');
+      let out = '', last = 0, m;
+      const re = /\[([a-z])[^\[]*\[([^\]]*)\]/gi;
+      while ((m = re.exec(w)) !== null) {
+        out += clean(w.slice(last, m.index));
+        out += `<span style="color:${TAJWEED_COLORS[m[1].toLowerCase()] || 'inherit'}">${clean(m[2])}</span>`;
+        last = re.lastIndex;
+      }
+      return out + clean(w.slice(last));
     }
     const toArabicDigits = (n) => String(n).replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
 
-    // NEW: Allows teacher to click the Surah name and type a page number
-    function promptPageChange() {
+    // NEW: Allows teacher to jump by Page OR by Surah
+    async function promptPageChange() {
       if (!liveSessionState.isTeacher) return;
-      const newPage = prompt("ወደ የትኛው ገጽ መሄድ ይፈልጋሉ? (1 - 604)", liveSessionState.page);
-      if (newPage) {
-        const pageNum = parseInt(newPage, 10);
-        if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= 604) {
-          fb.setDoc(fb.doc(fb.db, 'liveSessions', liveSessionState.studentUid), { page: pageNum, marks: {}, drawings: [] }, { mergeFields: ['page', 'marks', 'drawings'] });
-        } else {
-          alert("እባክዎ ከ 1 እስከ 604 ያለ ትክክለኛ ገጽ ያስገቡ።");
+      const input = prompt("ወደ የትኛው ገጽ ወይም ሱራ መሄድ ይፈልጋሉ?\n\n- ገጽ ቁጥር ብቻ ይጻፉ (ለምሳሌ: 45)\n- ወይም ለሱራ 's' ብለው ቁጥሩን ይጻፉ (ለምሳሌ ሱራ አል-ካህፍ: s18)", liveSessionState.page);
+      if (!input) return;
+
+      let targetPage = null;
+      const trimmed = input.trim();
+
+      if (trimmed.toLowerCase().startsWith('s')) {
+        const surahNum = parseInt(trimmed.substring(1), 10);
+        if (surahNum >= 1 && surahNum <= 114) {
+          try {
+            const res = await fetch(`https://api.alquran.cloud/v1/surah/${surahNum}`);
+            const json = await res.json();
+            if (json.data && json.data.ayahs && json.data.ayahs.length > 0) {
+              targetPage = json.data.ayahs[0].page;
+            }
+          } catch (e) {
+            alert("የሱራ መረጃ ማምጣት አልተቻለም — እባክዎ ኢንተርኔት ያረጋግጡ።");
+            return;
+          }
         }
+      } else {
+        const pageNum = parseInt(trimmed, 10);
+        if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= 604) {
+          targetPage = pageNum;
+        }
+      }
+
+      if (targetPage) {
+        fb.setDoc(fb.doc(fb.db, 'liveSessions', liveSessionState.studentUid), { page: targetPage, marks: {}, drawings: [] }, { mergeFields: ['page', 'marks', 'drawings'] });
+      } else {
+        alert("እባክዎ ከ 1 እስከ 604 ያለ ትክክለኛ ገጽ ወይም ከ s1 እስከ s114 ያለ ሱራ ያስገቡ።");
       }
     }
 
