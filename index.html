@@ -593,6 +593,8 @@
     body.live-teacher .student-only { display: none !important; }
     .teacher-bottom-dock { padding: 10px 14px; gap: 8px; }
     body.live-teacher #quran-page-container { padding-bottom: 135px; }
+    body.mushaf-mode .pen-row, body.mushaf-mode #pen-eraser { display: none !important; }
+    #mushaf-btn.on { background: #1B5E3A !important; color: #fff !important; }
     .quran-word.stumble { background: #E1BEE7 !important; box-shadow: 0 0 0 2px #BA68C8; }
   </style>
 </head>
@@ -827,14 +829,15 @@
           <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
             <div style="display:flex; align-items:center; gap:10px;">
               <button class="btn-icon sm" onclick="teacherChangePage(-1)">←</button>
-              <span style="font-weight:800; font-size:0.95rem; color:#4B5563;">ገጽ <span id="quran-page-num-label">1</span></span>
+              <span style="font-weight:800; font-size:0.95rem; color:#4B5563; min-width:24px; text-align:center;"><span id="quran-page-num-label">1</span></span>
               <button class="btn-icon sm" onclick="teacherChangePage(1)">→</button>
+              <button id="mushaf-btn" class="btn-icon sm" onclick="toggleMushafMode()" title="ምስል / ጽሑፍ ቀይር" style="background:#E8F5E9; color:#1B5E3A;">📖</button>
             </div>
             <span class="live-timer-mini"><span class="live-dot"></span><span class="session-timer-text">00:00</span></span>
-            <div class="tajweed-pen" id="pen-eraser" onclick="selectTajweedTool('eraser')" title="Eraser" style="width:40px; height:40px;">🧹</div>
+            <div class="tajweed-pen" id="pen-eraser" onclick="selectTajweedTool('eraser')" title="Eraser" style="width:40px; height:40px; flex:0 0 auto;">🧹</div>
           </div>
 
-          <div style="display:flex; justify-content:space-between; align-items:center; padding: 0 6px;">
+          <div class="pen-row" style="display:flex; justify-content:space-between; align-items:center; padding: 0 6px;">
             <div class="tajweed-pen selected" id="pen-hand" onclick="selectTajweedTool('hand')">🖐️</div>
             <div class="tajweed-pen" id="pen-point" onclick="selectTajweedTool('point')"><div class="pen-color" style="background:#2196F3;"></div></div>
             <div class="tajweed-pen" id="pen-mistake" onclick="selectTajweedTool('mistake')"><div class="pen-color" style="background:#E53935;"></div></div>
@@ -1396,7 +1399,7 @@
     }
 
     function openLiveQuranView(studentUid, isTeacher, studentEmail) {
-      liveSessionState = { studentUid, isTeacher, page: 1, marks: {} };
+      liveSessionState = { studentUid, isTeacher, page: 1, marks: {}, mushafMode: false };
       document.getElementById('quran-teacher-controls').style.display = isTeacher ? 'flex' : 'none';
       document.body.classList.toggle('live-teacher', !!isTeacher);
       selectTajweedTool('hand');
@@ -1409,6 +1412,7 @@
         const data = snap.data();
         if (!sessionTimerInterval) startSessionTimer(data.startedAt);
         const pageChanged = data.page !== liveSessionState.page;
+        liveSessionState.mushafMode = !!data.mushafMode;
         liveSessionState.page = data.page || 1;
         liveSessionState.marks = data.marks || {};
         document.getElementById('quran-page-num-label').innerText = liveSessionState.page;
@@ -1462,26 +1466,34 @@
     function renderQuranPage(ayahs, marks, interactive) {
       const container = document.getElementById('quran-page-container');
       const firstSurah = (ayahs[0] && ayahs[0].surah && ayahs[0].surah.name) || '';
-  
-      // The Clickable Surah Title Badge
+      document.body.classList.toggle('mushaf-mode', !!liveSessionState.mushafMode);
+      const mb = document.getElementById('mushaf-btn'); if (mb) mb.classList.toggle('on', !!liveSessionState.mushafMode);
+
+      // The Clickable Surah Title Badge (clickable for the teacher only)
       let html = `
         <div ${liveSessionState.isTeacher ? 'onclick="promptPageChange()"' : ''} style="text-align:center; font-family:var(--font-arabic); font-size:1.4rem; color:var(--primary-dark); margin: 0 auto 20px auto; padding: 8px 20px; background: linear-gradient(135deg, #fffdf5, #fbf3de); border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #ecdfb8; display:inline-block; cursor:${liveSessionState.isTeacher ? 'pointer' : 'default'}; font-weight:bold;">
           ${firstSurah}${liveSessionState.isTeacher ? ' ▾' : ''} <span style="font-size:1rem; opacity:0.8; margin-right:8px;">(ገጽ ${liveSessionState.page})</span>
         </div>
       `;
-  
-      const lockScroll = liveSessionState.isTeacher && currentTajweedTool !== 'hand';
-      html += `<div class="quran-page" style="touch-action: ${lockScroll ? 'none' : 'auto'}">`;
-      ayahs.forEach(ayah => {
-        const words = ayah.text.split(' ').filter(Boolean);
-        words.forEach((w, i) => {
-          const loc = `${ayah.number}-${i}`;
-          const markType = marks[loc] || '';
-          html += `<span class="quran-word ${markType}" data-loc="${loc}">${w}</span> `;
+
+      if (liveSessionState.mushafMode) {
+        // IMAGE MODE: the real Mushaf page (no painting here)
+        html += `<div style="text-align:center; padding:0 6px;"><img data-idx="0" src="${MUSHAF_IMG_SOURCES[0](liveSessionState.page)}" onerror="mushafImgError(this)" alt="Mushaf page ${liveSessionState.page}" style="width:100%; max-width:550px; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.15); background:#fff;"></div>`;
+      } else {
+        // TEXT MODE: text with the painting tools
+        const lockScroll = liveSessionState.isTeacher && currentTajweedTool !== 'hand';
+        html += `<div class="quran-page" style="touch-action: ${lockScroll ? 'none' : 'auto'}">`;
+        ayahs.forEach(ayah => {
+          const words = ayah.text.split(' ').filter(Boolean);
+          words.forEach((w, i) => {
+            const loc = `${ayah.number}-${i}`;
+            const markType = marks[loc] || '';
+            html += `<span class="quran-word ${markType}" data-loc="${loc}">${w}</span> `;
+          });
+          html += `<span class="quran-ayah-end">﴾${ayah.numberInSurah}﴿</span> `;
         });
-        html += `<span class="quran-ayah-end">﴾${ayah.numberInSurah}﴿</span> `;
-      });
-      html += '</div>';
+        html += '</div>';
+      }
       container.innerHTML = html;
     }
 
@@ -1539,6 +1551,23 @@
       if (!liveSessionState.isTeacher) return;
       const newPage = Math.min(604, Math.max(1, liveSessionState.page + delta));
       fb.setDoc(fb.doc(fb.db, 'liveSessions', liveSessionState.studentUid), { page: newPage, marks: {} }, { mergeFields: ['page', 'marks'] });
+    }
+
+    // Toggles between Text (for painting) and real-Mushaf page image
+    function toggleMushafMode() {
+      if (!liveSessionState.isTeacher) return;
+      fb.setDoc(fb.doc(fb.db, 'liveSessions', liveSessionState.studentUid), { mushafMode: !liveSessionState.mushafMode }, { merge: true });
+    }
+
+    // Page-image sources, tried in order. To change the image provider later, edit this list only.
+    const MUSHAF_IMG_SOURCES = [
+      p => `https://raw.githubusercontent.com/quran/quran.com-images/master/width_1024/page${String(p).padStart(3, '0')}.png`,
+      p => `https://api.islamic.app/v1/mushaf/page/${p}.svg?width=1000`
+    ];
+    function mushafImgError(img) {
+      const next = (parseInt(img.dataset.idx, 10) || 0) + 1;
+      if (next < MUSHAF_IMG_SOURCES.length) { img.dataset.idx = next; img.src = MUSHAF_IMG_SOURCES[next](liveSessionState.page); }
+      else { img.parentNode.innerHTML = '<p style="color:#c00;">ምስሉ አልተጫነም — ወደ ጽሑፍ ለመመለስ 📖 ይጫኑ።</p>'; }
     }
 
     // Free, no-signup audio room via public Jitsi Meet server. For a fully custom/branded
