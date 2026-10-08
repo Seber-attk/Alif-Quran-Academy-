@@ -1601,7 +1601,7 @@ unsubLiveSession = fb.onSnapshot(fb.doc(fb.db, 'liveSessions', studentUid), asyn
     const TAJWEED_COLORS = { h:'#AAAAAA', s:'#AAAAAA', l:'#AAAAAA', n:'#537FFF', p:'#4050FF', m:'#000EBC', o:'#2144C1', q:'#DD0008', c:'#D500B7', f:'#9400A8', w:'#58B800', i:'#26BFFD', a:'#169777', u:'#169200', d:'#A1A1A1', b:'#A1A1A1', g:'#FF7E1E' };
     // true  = only the small marks (fatha, kasra, shadda...) get the tajweed colour, letters stay black (like a printed tajweed Mushaf)
     // false = the whole coloured letter group is coloured
-    const TAJWEED_MARKS_ONLY = true;
+    const TAJWEED_MARKS_ONLY = false; // keep false: browsers cannot colour a mark separately from its letter
     function tajweedColorize(t, color) {
       if (!color) return t;
       if (!TAJWEED_MARKS_ONLY || !/\p{Mn}/u.test(t)) return `<span style="color:${color}">${t}</span>`;
@@ -1618,9 +1618,16 @@ unsubLiveSession = fb.onSnapshot(fb.doc(fb.db, 'liveSessions', studentUid), asyn
       '\u0653': '#E5632B'                                               // maddah                        = orange
     };
     const HARAKAT_COLORS_ON = true;
+    // A browser paints a letter and its marks as ONE unit, so we colour the whole letter by its harakah.
+    // Priority when a letter has several marks: vowel/tanween first, then shadda, sukun, maddah.
+    const HARAKAT_PRIORITY = ['\u064E','\u0650','\u064F','\u064B','\u064D','\u064C','\u0651','\u0652','\u0653','\u0670'];
     function harakatColorize(t) {
       if (!HARAKAT_COLORS_ON) return t;
-      return t.replace(/\p{Mn}/gu, (ch) => HARAKAT_COLORS[ch] ? `<span style="color:${HARAKAT_COLORS[ch]}">${ch}</span>` : ch);
+      return t.replace(/(\P{Mn})(\p{Mn}*)/gu, (all, base, marks) => {
+        if (!marks) return all;
+        const key = HARAKAT_PRIORITY.find(k => marks.includes(k));
+        return key ? `<span style="color:${HARAKAT_COLORS[key]}">${all}</span>` : all;
+      });
     }
     function tajweedHtml(w) {
       // Strip stray Latin letters, digits and colons that leak from the API, plus any brackets.
