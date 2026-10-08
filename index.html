@@ -593,7 +593,6 @@
     body.live-teacher .student-only { display: none !important; }
     .teacher-bottom-dock { padding: 10px 14px; gap: 8px; }
     body.live-teacher #quran-page-container { padding-bottom: 135px; }
-    body.mushaf-mode .pen-row, body.mushaf-mode #pen-eraser { display: none !important; }
     #mushaf-btn.on { background: #1B5E3A !important; color: #fff !important; }
     .quran-word.stumble { background: #E1BEE7 !important; box-shadow: 0 0 0 2px #BA68C8; }
   </style>
@@ -1399,32 +1398,53 @@
     }
 
     function openLiveQuranView(studentUid, isTeacher, studentEmail) {
-      liveSessionState = { studentUid, isTeacher, page: 1, marks: {}, mushafMode: false };
+      liveSessionState = { studentUid, isTeacher, page: 1, marks: {}, mushafMode: false, drawings: [] };
       document.getElementById('quran-teacher-controls').style.display = isTeacher ? 'flex' : 'none';
       document.body.classList.toggle('live-teacher', !!isTeacher);
       selectTajweedTool('hand');
       document.getElementById('quran-session-student-label').innerText = studentEmail || '';
       showView('live-quran-view');
       if (unsubLiveSession) unsubLiveSession();
-      unsubLiveSession = fb.onSnapshot(fb.doc(fb.db, 'liveSessions', studentUid), async (snap) => {
-        if (!snap.exists() || !snap.data().active) return;
-        if (liveSessionState.isTeacher && (isPainting || pendingMarks)) return; // keep the stroke in progress
-        const data = snap.data();
-        if (!sessionTimerInterval) startSessionTimer(data.startedAt);
-        const pageChanged = data.page !== liveSessionState.page;
-        liveSessionState.mushafMode = !!data.mushafMode;
-        liveSessionState.page = data.page || 1;
-        liveSessionState.marks = data.marks || {};
-        document.getElementById('quran-page-num-label').innerText = liveSessionState.page;
+unsubLiveSession = fb.onSnapshot(fb.doc(fb.db, 'liveSessions', studentUid), async (snap) => {
+      if (!snap.exists() || !snap.data().active) return;
+      
+      // If the teacher is currently painting/drawing, ignore network updates so the pen doesn't glitch
+      if (liveSessionState.isTeacher && (isPainting || isCanvasDrawing || pendingMarks)) return;
+
+      const data = snap.data();
+      if (!sessionTimerInterval) startSessionTimer(data.startedAt);
+      
+      const pageChanged = (data.page || 1) !== liveSessionState.page;
+      const modeChanged = !!data.mushafMode !== !!liveSessionState.mushafMode;
+      
+      liveSessionState.page = data.page || 1;
+      liveSessionState.mushafMode = data.mushafMode || false;
+      liveSessionState.marks = data.marks || {};
+      liveSessionState.drawings = data.drawings || []; // NEW: Array of drawn lines
+      
+      document.getElementById('quran-page-num-label').innerText = liveSessionState.page;
+
+      const container = document.getElementById('quran-page-container');
+      
+      // ONLY rebuild HTML if the page turned or the mode changed
+      if (pageChanged || modeChanged || container.innerHTML.includes('በመጫን ላይ')) {
         try {
           const ayahs = await fetchQuranPage(liveSessionState.page);
           renderQuranPage(ayahs, liveSessionState.marks, isTeacher);
         } catch (e) {
-          document.getElementById('quran-page-container').innerHTML = '<p style="color:#c00;">ገጹን መጫን አልተቻለም — ኢንተርኔት ያረጋግጡ።</p>';
+          container.innerHTML = '<p style="color:#c00;">ገጹን መጫን አልተቻለም — ኢንተርኔት ያረጋግጡ።</p>';
         }
+      } else {
+        // HOT-UPDATE: Update drawings or marks silently without reloading the image/text!
+        if (liveSessionState.mushafMode) {
+          updateCanvasStrokes();
+        } else {
+          updateTextMarks();
+        }
+      }
       }, (err) => {
-        alert('Live session sync failed: ' + (err && err.message ? err.message : err));
-      });
+      alert('Live session sync failed: ' + (err && err.message ? err.message : err));
+    });
     }
 
     function leaveLiveQuranView() {
@@ -1455,7 +1475,7 @@
       if (newPage) {
         const pageNum = parseInt(newPage, 10);
         if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= 604) {
-          fb.setDoc(fb.doc(fb.db, 'liveSessions', liveSessionState.studentUid), { page: pageNum, marks: {} }, { mergeFields: ['page', 'marks'] });
+          fb.setDoc(fb.doc(fb.db, 'liveSessions', liveSessionState.studentUid), { page: pageNum, marks: {}, drawings: [] }, { mergeFields: ['page', 'marks', 'drawings'] });
         } else {
           alert("እባክዎ ከ 1 እስከ 604 ያለ ትክክለኛ ገጽ ያስገቡ።");
         }
@@ -1478,7 +1498,12 @@
 
       if (liveSessionState.mushafMode) {
         // IMAGE MODE: the real Mushaf page (no painting here)
-        html += `<div style="text-align:center; padding:0 6px;"><img data-idx="0" src="${MUSHAF_IMG_SOURCES[0](liveSessionState.page)}" onerror="mushafImgError(this)" alt="Mushaf page ${liveSessionState.page}" style="width:100%; max-width:550px; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.15); background:#fff;"></div>`;
+        const t = liveSessionState.isTeacher;
+        html += `
+          <div style="position:relative; display:inline-block; width:100%; max-width:550px; margin:0 auto;">
+            <img data-idx="0" id="mushaf-bg" src="${MUSHAF_IMG_SOURCES[0](liveSessionState.page)}" onload="initMushafCanvas()" onerror="mushafImgError(this)" alt="Mushaf page ${liveSessionState.page}" style="width:100%; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.15); background:#fff; display:block;">
+            <canvas id="mushaf-canvas" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:10; touch-action:${t && currentTajweedTool !== 'hand' ? 'none' : 'auto'}; pointer-events:${t ? 'auto' : 'none'};"></canvas>
+          </div>`;
       } else {
         // TEXT MODE: text with the painting tools
         const lockScroll = liveSessionState.isTeacher && currentTajweedTool !== 'hand';
@@ -1506,6 +1531,8 @@
       currentTajweedTool = tool;
       document.querySelectorAll('.tajweed-pen').forEach(b => b.classList.remove('selected'));
       const pen = document.getElementById('pen-' + tool); if (pen) pen.classList.add('selected');
+      const cv = document.getElementById('mushaf-canvas');
+      if (cv) cv.style.touchAction = (liveSessionState.isTeacher && tool !== 'hand') ? 'none' : 'auto';
       const page = document.querySelector('.quran-page');
       if (page) page.style.touchAction = (liveSessionState.isTeacher && tool !== 'hand') ? 'none' : 'auto';
     }
@@ -1544,19 +1571,137 @@
     })();
 
     function teacherClearMarks() {
-      fb.setDoc(fb.doc(fb.db, 'liveSessions', liveSessionState.studentUid), { marks: {} }, { merge: true });
+      fb.setDoc(fb.doc(fb.db, 'liveSessions', liveSessionState.studentUid), { marks: {}, drawings: [] }, { mergeFields: ['marks', 'drawings'] });
     }
 
     function teacherChangePage(delta) {
       if (!liveSessionState.isTeacher) return;
       const newPage = Math.min(604, Math.max(1, liveSessionState.page + delta));
-      fb.setDoc(fb.doc(fb.db, 'liveSessions', liveSessionState.studentUid), { page: newPage, marks: {} }, { mergeFields: ['page', 'marks'] });
+      fb.setDoc(fb.doc(fb.db, 'liveSessions', liveSessionState.studentUid), { page: newPage, marks: {}, drawings: [] }, { mergeFields: ['page', 'marks', 'drawings'] });
     }
 
     // Toggles between Text (for painting) and real-Mushaf page image
     function toggleMushafMode() {
       if (!liveSessionState.isTeacher) return;
       fb.setDoc(fb.doc(fb.db, 'liveSessions', liveSessionState.studentUid), { mushafMode: !liveSessionState.mushafMode }, { merge: true });
+    }
+
+    // --- FREEHAND CANVAS DRAWING ENGINE (FOR MUSHAF MODE) ---
+    let mushafCtx = null;
+    let isCanvasDrawing = false;
+    let currentStroke = null;
+
+    // Hot-updates text mode spans
+    function updateTextMarks() {
+      document.querySelectorAll('.quran-word').forEach(el => {
+        const loc = el.getAttribute('data-loc');
+        const mark = liveSessionState.marks[loc] || '';
+        el.className = 'quran-word' + (mark ? ' ' + mark : '');
+      });
+    }
+
+    // Redraws all lines on the canvas
+    function updateCanvasStrokes() {
+      const canvas = document.getElementById('mushaf-canvas');
+      const img = document.getElementById('mushaf-bg');
+      if (canvas && img) {
+        mushafCtx = canvas.getContext('2d');
+        canvas.width = img.clientWidth;
+        canvas.height = img.clientHeight;
+        mushafCtx.clearRect(0, 0, canvas.width, canvas.height);
+        mushafCtx.lineCap = 'round';
+        mushafCtx.lineJoin = 'round';
+        mushafCtx.lineWidth = 4; // Pen thickness
+    
+        const strokes = liveSessionState.drawings || [];
+        strokes.forEach(stroke => {
+          if (!stroke.points || stroke.points.length === 0) return;
+          mushafCtx.strokeStyle = stroke.color;
+          mushafCtx.beginPath();
+          mushafCtx.moveTo(stroke.points[0].x * canvas.width, stroke.points[0].y * canvas.height);
+          for (let i = 1; i < stroke.points.length; i++) {
+            mushafCtx.lineTo(stroke.points[i].x * canvas.width, stroke.points[i].y * canvas.height);
+          }
+          mushafCtx.stroke();
+        });
+      }
+    }
+
+    // Re-scale canvas if device rotates
+    window.addEventListener('resize', updateCanvasStrokes);
+
+    // Initializes the whiteboard overlay
+    function initMushafCanvas() {
+      const canvas = document.getElementById('mushaf-canvas');
+      if (!canvas) return;
+      mushafCtx = canvas.getContext('2d');
+      updateCanvasStrokes();
+
+      if (!liveSessionState.isTeacher || canvas.dataset.bound) return;
+      canvas.dataset.bound = '1';
+
+      const getPos = (e) => {
+        const r = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return { x: Math.round(((clientX - r.left) / r.width) * 10000) / 10000, y: Math.round(((clientY - r.top) / r.height) * 10000) / 10000 };
+      };
+
+      const startDraw = (e) => {
+        if (currentTajweedTool === 'hand') return;
+        e.preventDefault(); 
+    
+        // Eraser clears the whole page
+        if (currentTajweedTool === 'eraser') {
+          liveSessionState.drawings = [];
+          fb.setDoc(fb.doc(fb.db, 'liveSessions', liveSessionState.studentUid), { drawings: [] }, { merge: true });
+          updateCanvasStrokes();
+          return;
+        }
+
+        isCanvasDrawing = true;
+        // Map existing Tajweed palette to Pen Colors!
+        const colors = { point: '#2196F3', mistake: '#E53935', ghunnah: '#43A047', madd: '#FB8C00', stumble: '#8E24AA' };
+        currentStroke = { color: colors[currentTajweedTool] || '#000', points: [getPos(e)] };
+      };
+
+      const doDraw = (e) => {
+        if (!isCanvasDrawing || !currentStroke) return;
+        e.preventDefault();
+        const pt = getPos(e);
+        const last = currentStroke.points[currentStroke.points.length - 1];
+        if (last && Math.abs(pt.x - last.x) < 0.002 && Math.abs(pt.y - last.y) < 0.002) return; // skip tiny moves: keeps the saved data small
+        currentStroke.points.push(pt);
+    
+        // Preview the line locally instantly
+        liveSessionState.drawings = liveSessionState.drawings || [];
+        liveSessionState.drawings.push(currentStroke);
+        updateCanvasStrokes();
+        liveSessionState.drawings.pop(); // Remove preview so it doesn't duplicate
+      };
+
+      const endDraw = (e) => {
+        if (!isCanvasDrawing) return;
+        isCanvasDrawing = false;
+        if (currentStroke && currentStroke.points.length > 0) {
+          liveSessionState.drawings = liveSessionState.drawings || [];
+          liveSessionState.drawings.push(currentStroke);
+          // Send the finished line to Firebase
+          fb.setDoc(fb.doc(fb.db, 'liveSessions', liveSessionState.studentUid), { drawings: liveSessionState.drawings }, { merge: true });
+        }
+        currentStroke = null;
+      };
+
+      canvas.addEventListener('mousedown', startDraw);
+      canvas.addEventListener('mousemove', doDraw);
+      if (window.__mushafEnd) { ['mouseup', 'touchend', 'touchcancel'].forEach(ev => window.removeEventListener(ev, window.__mushafEnd)); }
+      window.__mushafEnd = endDraw;
+      window.addEventListener('mouseup', endDraw);
+  
+      canvas.addEventListener('touchstart', startDraw, { passive: false });
+      canvas.addEventListener('touchmove', doDraw, { passive: false });
+      window.addEventListener('touchend', endDraw);
+      window.addEventListener('touchcancel', endDraw);
     }
 
     // Page-image sources, tried in order. To change the image provider later, edit this list only.
