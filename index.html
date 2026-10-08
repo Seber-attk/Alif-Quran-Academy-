@@ -276,9 +276,7 @@
     .btn-icon.sm { width: 34px; height: 34px; font-size: 0.95rem; box-shadow: 0 2px 0 #D5CBB0; }
     .btn-icon.sm.audio-btn-icon { box-shadow: 0 2px 0 #90CAF9; }
     .btn-icon.sm.btn-danger { box-shadow: 0 2px 0 #B91C1C; }
-    .live-title { flex: 1; min-width: 0; font-size: 0.78rem; font-weight: 800; color: var(--primary-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
     .live-timer-mini { display: flex; align-items: center; gap: 4px; font-size: 0.7rem; font-weight: 800; color: #555; background: #F3EFE6; border-radius: 12px; padding: 2px 8px; white-space: nowrap; }
-    .bottom-palette { display: none; position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom)); flex-direction: row; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(255,255,255,0.94); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-radius: 30px; box-shadow: 0 8px 28px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05); z-index: 150; }
     /* ===== PHASE 3: maximize Quran space ===== */
     /* --- MAXIMIZE QURAN SPACE: Hide old bulky headers --- */
     .quran-session-header, .quran-teacher-controls-group, .quran-mark-legend {
@@ -532,15 +530,64 @@
     .res-tile:nth-child(1){background:#E3F2FD}.res-tile:nth-child(2){background:#E8F5E9}.res-tile:nth-child(3){background:#FFF3E0}.res-tile:nth-child(4){background:#FCE4EC}
     .res-tile:nth-child(1) b{color:#1565C0}.res-tile:nth-child(2) b{color:#2E7D32}.res-tile:nth-child(3) b{color:#E65100}.res-tile:nth-child(4) b{color:#C2185B}
       /* ===== PHASE 5: two-line top bar, 2-row palette ===== */
-    .live-top-bar { flex-direction: column; align-items: stretch; gap: 4px; }
-    .live-row { display: flex; align-items: center; gap: 6px; }
-    .live-appname { flex: 1; min-width: 0; font-weight: 800; font-size: 0.9rem; color: var(--primary-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .live-title { font-size: 0.85rem; }
-    body:not(.live-teacher) .teacher-only { display: none; }
     .btn-icon.sm.muted { background: #FDE2E2; box-shadow: 0 2px 0 #F5A5A5; }
-    .bottom-palette { flex-direction: column; gap: 6px; padding: 8px 14px; border-radius: 26px; }
-    .pal-row { display: flex; gap: 10px; justify-content: center; }
-    body.live-teacher #quran-page-container { padding-bottom: 150px; }
+      /* ===== PHASE 6: Full-Screen Quran & Unified Bottom Dock ===== */
+    body.live-mode header { display: none; }
+
+    #quran-page-container { 
+      padding-top: 65px; /* Pushes text below the slim top bar */
+      padding-bottom: 40px; 
+    }
+    body.live-teacher #quran-page-container { 
+      padding-bottom: 215px; /* Leaves space for the teacher's bottom dock */
+    }
+
+    /* Ultra Slim Single-Line Top Bar */
+    .live-top-bar { 
+      position: fixed; 
+      top: 10px; left: 10px; right: 10px; 
+      z-index: 120; 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between;
+      padding: 8px 12px; 
+      background: rgba(255, 255, 255, 0.95); 
+      backdrop-filter: blur(14px); 
+      -webkit-backdrop-filter: blur(14px); 
+      border-radius: 20px; 
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); 
+    }
+
+    .live-appname { 
+      font-weight: 800; 
+      font-size: 1.05rem; 
+      color: var(--primary-dark); 
+      flex: 1;
+      min-width: 0;
+      text-align: center;
+      font-size: 0.85rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Teacher's Unified Bottom Dock */
+    .teacher-bottom-dock { 
+      display: none; 
+      position: fixed; 
+      left: 10px; right: 10px; 
+      bottom: calc(12px + env(safe-area-inset-bottom, 0px)); 
+      background: rgba(255, 255, 255, 0.96); 
+      backdrop-filter: blur(16px); 
+      -webkit-backdrop-filter: blur(16px); 
+      border-radius: 28px; 
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05); 
+      z-index: 150; 
+      padding: 14px 16px; 
+      flex-direction: column; 
+      gap: 12px; 
+    }
+    body.live-teacher .teacher-bottom-dock { display: flex; }
   </style>
 </head>
 <body>
@@ -749,42 +796,52 @@
       </div>
 
       <div id="live-quran-view" class="view">
+        
+        <!-- 1. Ultra-Slim Top Bar -->
         <div class="live-top-bar">
-          <!-- Line 1: leave · app name · call · mute · timer -->
-          <div class="live-row">
-            <button class="btn-icon sm" onclick="leaveLiveQuranView()" title="ውጣ">❌</button>
-            <div class="live-appname">Alif Quran Academy 🇪🇹</div>
-            <button class="btn-icon sm audio-btn-icon" onclick="toggleAudioCall()" title="ድምጽ ጀምር / ዝጋ">🎤</button>
-            <button id="mute-btn" class="btn-icon sm" style="display:none;" onclick="toggleMute()" title="ድምጽ አጥፋ / አብራ">🎙️</button>
+          <button class="btn-icon sm" onclick="leaveLiveQuranView()" title="ውጣ">❌</button>
+          <div class="live-appname">Alif Quran Academy 🇪🇹</div>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <button class="btn-icon sm audio-btn-icon" onclick="toggleAudioCall()" title="ድምጽ">🎤</button>
+            <button id="mute-btn" class="btn-icon sm" style="display:none;" onclick="toggleMute()" title="ድምጽ አጥፋ">🎙️</button>
             <span class="live-timer-mini"><span class="live-dot"></span><span id="quran-session-timer">00:00</span></span>
           </div>
-          <!-- Line 2: surah + page (teacher also gets ← → ⏹) -->
-          <div class="live-row">
-            <button class="btn-icon sm teacher-only" onclick="teacherChangePage(-1)">←</button>
-            <div class="live-title"><span id="quran-page-title">ገጽ</span></div>
-            <button class="btn-icon sm teacher-only" onclick="teacherChangePage(1)">→</button>
-            <button class="btn-icon sm btn-danger teacher-only" onclick="endLiveSession()" title="ክፍለ ትምህርቱን ዝጋ">⏹</button>
-          </div>
         </div>
-        <span id="quran-teacher-controls" style="display:none;"></span>
-        <span id="quran-page-num-label" style="display:none;">1</span>
-        <span id="quran-session-student-label" style="display:none;"></span>
-
-        <div id="quran-page-container"><p style="color:#999;">በመጫን ላይ…</p></div>
+      
+        <!-- 2. Scrolling Quran Content -->
+        <div id="quran-page-container" style="text-align:center;">
+          <p style="color:#999; margin-top:40px;">በመጫን ላይ…</p>
+        </div>
         <div id="quran-audio-container"></div>
-
-        <!-- Palette (teacher only): tools on their own line, colours on the line below -->
-        <div id="quran-palette" class="bottom-palette">
-          <div class="pal-row">
-            <div class="tajweed-pen selected" id="pen-hand" onclick="selectTajweedTool('hand')" title="Scroll">🖐️</div>
-            <div class="tajweed-pen" id="pen-eraser" onclick="selectTajweedTool('eraser')" title="Eraser">🧹</div>
+        <span id="quran-session-student-label" style="display:none;"></span>
+      
+        <!-- 3. Teacher's Unified Bottom Dock -->
+        <div id="quran-teacher-controls" class="teacher-bottom-dock">
+          
+          <!-- Top Row: Page Navigation & Stop Session -->
+          <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; border-bottom:1px solid #E5E7EB;">
+            <div style="display:flex; align-items:center; gap:16px;">
+              <button class="btn-icon sm" onclick="teacherChangePage(-1)">←</button>
+              <span style="font-weight:800; font-size:1rem; color:#4B5563;">ገጽ <span id="quran-page-num-label">1</span></span>
+              <button class="btn-icon sm" onclick="teacherChangePage(1)">→</button>
+            </div>
+            <button class="btn-icon sm btn-danger" onclick="endLiveSession()" title="ክፍለ ትምህርቱን ዝጋ">⏹</button>
           </div>
-          <div class="pal-row">
+          
+          <!-- Bottom Row: Sketching Tools & Eraser Above Orange -->
+          <div style="display:flex; justify-content:space-between; align-items:center; padding: 0 10px; margin-top:44px;">
+            <div class="tajweed-pen selected" id="pen-hand" onclick="selectTajweedTool('hand')">🖐️</div>
             <div class="tajweed-pen" id="pen-point" onclick="selectTajweedTool('point')"><div class="pen-color" style="background:#2196F3;"></div></div>
             <div class="tajweed-pen" id="pen-mistake" onclick="selectTajweedTool('mistake')"><div class="pen-color" style="background:#E53935;"></div></div>
             <div class="tajweed-pen" id="pen-ghunnah" onclick="selectTajweedTool('ghunnah')"><div class="pen-color" style="background:#43A047;"></div></div>
-            <div class="tajweed-pen" id="pen-madd" onclick="selectTajweedTool('madd')"><div class="pen-color" style="background:#FB8C00;"></div></div>
+            
+            <!-- Orange Pen with Eraser floating directly above it -->
+            <div style="position:relative; display:flex; justify-content:center;">
+              <div class="tajweed-pen" id="pen-eraser" onclick="selectTajweedTool('eraser')" style="position:absolute; top:-52px; width:40px; height:40px; font-size:1.1rem; box-shadow: 0 6px 16px rgba(0,0,0,0.15);">🧹</div>
+              <div class="tajweed-pen" id="pen-madd" onclick="selectTajweedTool('madd')"><div class="pen-color" style="background:#FB8C00;"></div></div>
+            </div>
           </div>
+      
         </div>
       </div>
 
@@ -1341,7 +1398,6 @@
     function openLiveQuranView(studentUid, isTeacher, studentEmail) {
       liveSessionState = { studentUid, isTeacher, page: 1, marks: {} };
       document.getElementById('quran-teacher-controls').style.display = isTeacher ? 'flex' : 'none';
-      document.getElementById('quran-palette').style.display = isTeacher ? 'flex' : 'none';
       document.body.classList.toggle('live-teacher', !!isTeacher);
       selectTajweedTool('hand');
       document.getElementById('quran-session-student-label').innerText = studentEmail || '';
@@ -1388,12 +1444,34 @@
       return json.data.ayahs;
     }
 
+    // NEW: Allows teacher to click the Surah name and type a page number
+    function promptPageChange() {
+      if (!liveSessionState.isTeacher) return;
+      const newPage = prompt("ወደ የትኛው ገጽ መሄድ ይፈልጋሉ? (1 - 604)", liveSessionState.page);
+      if (newPage) {
+        const pageNum = parseInt(newPage, 10);
+        if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= 604) {
+          fb.setDoc(fb.doc(fb.db, 'liveSessions', liveSessionState.studentUid), { page: pageNum, marks: {} }, { mergeFields: ['page', 'marks'] });
+        } else {
+          alert("እባክዎ ከ 1 እስከ 604 ያለ ትክክለኛ ገጽ ያስገቡ።");
+        }
+      }
+    }
+
+    // UPDATED: Renders the Clickable Surah title inside the scrolling view
     function renderQuranPage(ayahs, marks, interactive) {
       const container = document.getElementById('quran-page-container');
       const firstSurah = (ayahs[0] && ayahs[0].surah && ayahs[0].surah.name) || '';
-      document.getElementById('quran-page-title').innerText = `ገጽ ${liveSessionState.page} · ${firstSurah}`;
+  
+      // The Clickable Surah Title Badge
+      let html = `
+        <div ${liveSessionState.isTeacher ? 'onclick="promptPageChange()"' : ''} style="text-align:center; font-family:var(--font-arabic); font-size:1.4rem; color:var(--primary-dark); margin: 0 auto 20px auto; padding: 8px 20px; background: linear-gradient(135deg, #fffdf5, #fbf3de); border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #ecdfb8; display:inline-block; cursor:${liveSessionState.isTeacher ? 'pointer' : 'default'}; font-weight:bold;">
+          ${firstSurah}${liveSessionState.isTeacher ? ' ▾' : ''} <span style="font-size:1rem; opacity:0.8; margin-right:8px;">(ገጽ ${liveSessionState.page})</span>
+        </div>
+      `;
+  
       const lockScroll = liveSessionState.isTeacher && currentTajweedTool !== 'hand';
-      let html = `<div class="quran-page" style="touch-action: ${lockScroll ? 'none' : 'auto'}">`;
+      html += `<div class="quran-page" style="touch-action: ${lockScroll ? 'none' : 'auto'}">`;
       ayahs.forEach(ayah => {
         const words = ayah.text.split(' ').filter(Boolean);
         words.forEach((w, i) => {
@@ -1460,7 +1538,7 @@
     function teacherChangePage(delta) {
       if (!liveSessionState.isTeacher) return;
       const newPage = Math.min(604, Math.max(1, liveSessionState.page + delta));
-      fb.setDoc(fb.doc(fb.db, 'liveSessions', liveSessionState.studentUid), { page: newPage, marks: {} }, { merge: true });
+      fb.setDoc(fb.doc(fb.db, 'liveSessions', liveSessionState.studentUid), { page: newPage, marks: {} }, { mergeFields: ['page', 'marks'] });
     }
 
     // Free, no-signup audio room via public Jitsi Meet server. For a fully custom/branded
