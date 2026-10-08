@@ -2,7 +2,7 @@
 // Caches the app shell so it opens fast and counts as an installable app.
 // Login/progress still need internet (they talk to Firebase).
 
-const CACHE_NAME = 'alif-quran-academy-shell-v13'; // bump this number whenever you deploy an update
+const CACHE_NAME = 'alif-quran-academy-shell-v14'; // bump this number whenever you deploy an update
 const SHELL_FILES = ['./index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (event) => {

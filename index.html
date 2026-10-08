@@ -700,6 +700,8 @@
     .premium-top-bar .live-appname { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem; }
     #mushaf-btn.on { background: #1B5E3A !important; color: #fff !important; }
 
+      /* ===== Round green-and-gold verse medallion (Arabic digits) ===== */
+    .quran-ayah-end { width: 40px; height: 40px; font-family: var(--font-arabic), var(--font-sans); font-size: 1.05rem; font-weight: 800; color: #2B2B28; background: url("data:image/svg+xml;utf8,<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><circle cx='50' cy='50' r='47' fill='%23D9B35A' stroke='%238A6A1E' stroke-width='3'/><circle cx='50' cy='50' r='39' fill='%23FFFDF7' stroke='%231F6B43' stroke-width='8'/><circle cx='50' cy='50' r='30' fill='%23FFFDF7' stroke='%23C9A24B' stroke-width='2'/><circle cx='50' cy='7' r='4' fill='%23D32F2F'/><circle cx='50' cy='93' r='4' fill='%23D32F2F'/></svg>") center/contain no-repeat; margin: 0 6px; transform: translateY(-3px); }
   </style>
 </head>
 <body>
@@ -1573,11 +1575,31 @@ unsubLiveSession = fb.onSnapshot(fb.doc(fb.db, 'liveSessions', studentUid), asyn
 
     async function fetchQuranPage(pageNum) {
       if (quranPageCache[pageNum]) return quranPageCache[pageNum];
-      const res = await fetch(`https://api.alquran.cloud/v1/page/${pageNum}/quran-uthmani`);
-      const json = await res.json();
-      quranPageCache[pageNum] = json.data.ayahs;
-      return json.data.ayahs;
+      // Tajweed-coloured text. Safari/iPhone break Arabic letter-joining when text has inline tags, so they get plain text.
+      const isWebKit = /iPhone|iPad|iPod/.test(navigator.userAgent) || /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent);
+      let ayahs = null;
+      if (!isWebKit) {
+        try {
+          const r = await fetch(`https://api.alquran.cloud/v1/page/${pageNum}/quran-tajweed`);
+          const j = await r.json();
+          if (j && j.data && j.data.ayahs && j.data.ayahs.length) ayahs = j.data.ayahs;
+        } catch (e) { /* fall back below */ }
+      }
+      if (!ayahs) {
+        const res = await fetch(`https://api.alquran.cloud/v1/page/${pageNum}/quran-uthmani`);
+        const json = await res.json();
+        ayahs = json.data.ayahs;
+      }
+      quranPageCache[pageNum] = ayahs;
+      return ayahs;
     }
+
+    // Tajweed colours (alquran.cloud rule letters). Text looks like: [h:1[ٱ]للَّهِ [n[ـٰ]نِ
+    const TAJWEED_COLORS = { h:'#AAAAAA', s:'#AAAAAA', l:'#AAAAAA', n:'#537FFF', p:'#4050FF', m:'#000EBC', o:'#2144C1', q:'#DD0008', c:'#D500B7', f:'#9400A8', w:'#58B800', i:'#26BFFD', a:'#169777', u:'#169200', d:'#A1A1A1', b:'#A1A1A1', g:'#FF7E1E' };
+    function tajweedHtml(w) {
+      return w.replace(/\[([a-z])(?::\d+)?\[([^\]]*)\]/g, (m, c, t) => `<span style="color:${TAJWEED_COLORS[c] || 'inherit'}">${t}</span>`).replace(/[\[\]]/g, '');
+    }
+    const toArabicDigits = (n) => String(n).replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
 
     // NEW: Allows teacher to click the Surah name and type a page number
     function promptPageChange() {
@@ -1624,9 +1646,9 @@ unsubLiveSession = fb.onSnapshot(fb.doc(fb.db, 'liveSessions', studentUid), asyn
           words.forEach((w, i) => {
             const loc = `${ayah.number}-${i}`;
             const markType = marks[loc] || '';
-            html += `<span class="quran-word ${markType}" data-loc="${loc}">${w}</span> `;
+            html += `<span class="quran-word ${markType}" data-loc="${loc}">${tajweedHtml(w)}</span> `;
           });
-          html += `<span class="quran-ayah-end">${ayah.numberInSurah}</span> `;
+          html += `<span class="quran-ayah-end">${toArabicDigits(ayah.numberInSurah)}</span> `;
         });
         html += '</div>';
       }
