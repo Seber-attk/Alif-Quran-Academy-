@@ -701,6 +701,52 @@
     .quran-ayah-end .n { position: relative; top: -0.3em; line-height: 1; }
     .quran-ayah-end.len2 { font-size: 0.88rem; }
     .quran-ayah-end.len3 { font-size: 0.7rem; }
+  /* Core Dark Mode Colors */
+  body.dark-mode {
+    --bg: #121212;
+    --card-bg: #1E1E1E;
+    --text: #F7F3EA;
+    --primary: #4CAF50;
+  }
+  
+  /* Force elements to use dark colors */
+  body.dark-mode .stat-tile, 
+  body.dark-mode .option-btn, 
+  body.dark-mode .match-tile, 
+  body.dark-mode .extra-card, 
+  body.dark-mode .quran-page, 
+  body.dark-mode .modal-card, 
+  body.dark-mode .auth-card {
+    background-color: var(--card-bg) !important;
+    color: var(--text) !important;
+    border-color: #333 !important;
+  }
+  
+  /* Frosted glass menus */
+  body.dark-mode .bottom-nav, 
+  body.dark-mode .live-top-bar, 
+  body.dark-mode .premium-top-bar, 
+  body.dark-mode .premium-bottom-dock .dock-row {
+    background: rgba(30, 30, 30, 0.92) !important;
+  }
+  
+  /* Text visibility fixes */
+  body.dark-mode .path-label, 
+  body.dark-mode .big-symbol, 
+  body.dark-mode .live-appname, 
+  body.dark-mode header h1, 
+  body.dark-mode .quran-ayah-end {
+    color: var(--text) !important;
+  }
+  
+  /* Darken the Mushaf Image background */
+  body.dark-mode.mushaf-mode #mushaf-bg {
+    filter: brightness(0.8) contrast(1.2);
+  }
+  
+  /* Button Styling */
+  .theme-toggle-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; opacity: 0.7; padding: 4px 6px; }
+  .theme-toggle-btn:hover { opacity: 1; }
   </style>
 </head>
 <body>
@@ -738,6 +784,7 @@
       <h1 onclick="showView('student-home')">Alif Quran Academy 🇪🇹</h1>
       <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
         <div class="xp-badge" id="xp-badge">⚡ <span id="total-xp">0</span> XP</div>
+        <button id="theme-toggle-btn" class="theme-toggle-btn" onclick="toggleTheme()" title="የገጽታ ቀለም">🌙</button>
         <button id="sound-toggle-btn" class="sound-toggle-btn" onclick="toggleSound()" title="ድምጽ">🔊</button>
         <span id="user-email-label" style="display:none;"></span>
         <button id="teacher-mode-btn" class="btn btn-outline" style="display:none;" onclick="showView('teacher-view')">👨‍🏫 Teacher</button>
@@ -3614,6 +3661,39 @@ const MASCOT_IMAGES = { boy: {}, girl: {} };
         navigator.serviceWorker.register('sw.js').catch(err => console.warn('Service worker registration failed:', err));
       });
     }
+  </script>
+  <script>
+    // Function to switch themes and save the choice
+    function toggleTheme() {
+      const body = document.body;
+      const themeBtn = document.getElementById('theme-toggle-btn');
+      
+      // Toggle the dark-mode class on the body
+      body.classList.toggle('dark-mode');
+      
+      // Check if it is currently dark mode and save preference
+      if (body.classList.contains('dark-mode')) {
+        localStorage.setItem('alif_theme', 'dark');
+        if (themeBtn) themeBtn.innerText = '☀️'; // Change icon to Sun
+      } else {
+        localStorage.setItem('alif_theme', 'light');
+        if (themeBtn) themeBtn.innerText = '🌙'; // Change icon back to Moon
+      }
+    }
+  
+    // Function to load their saved theme instantly when the app opens
+    function applySavedTheme() {
+      const savedTheme = localStorage.getItem('alif_theme');
+      const themeBtn = document.getElementById('theme-toggle-btn');
+      
+      if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+        if (themeBtn) themeBtn.innerText = '☀️';
+      }
+    }
+    
+    // Run this immediately when the page loads
+    applySavedTheme();
   </script>
 </body>
 </html>
