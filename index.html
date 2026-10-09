@@ -743,6 +743,18 @@
   body.dark-mode.mushaf-mode #mushaf-bg {
     filter: brightness(0.8) contrast(1.2);
   }
+
+  /* Live Quran session: the paper-texture background stays light unless we override it here */
+  body.dark-mode.live-mode {
+    background-color: var(--bg) !important;
+    background-image: none !important;
+  }
+
+  /* Home header bar: was a light frosted strip, which is why the title looked washed out */
+  body.dark-mode header {
+    background: rgba(30, 30, 30, 0.92) !important;
+    border-bottom-color: #333 !important;
+  }
   
   /* Button Styling */
   .theme-toggle-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; opacity: 0.7; padding: 4px 6px; }
