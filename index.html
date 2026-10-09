@@ -734,8 +734,7 @@
   body.dark-mode .path-label, 
   body.dark-mode .big-symbol, 
   body.dark-mode .live-appname, 
-  body.dark-mode header h1, 
-  body.dark-mode .quran-ayah-end {
+  body.dark-mode header h1 {
     color: var(--text) !important;
   }
   
@@ -754,6 +753,16 @@
   body.dark-mode header {
     background: rgba(30, 30, 30, 0.92) !important;
     border-bottom-color: #333 !important;
+  }
+
+  /* Admin/teacher list rows: student list, level rows, achievement rows all share this class */
+  body.dark-mode .q-admin-item {
+    background: var(--card-bg) !important;
+    color: var(--text) !important;
+    border-color: #333 !important;
+  }
+  body.dark-mode .q-admin-item span {
+    color: var(--text) !important;
   }
   
   /* Button Styling */
