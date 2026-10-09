@@ -2228,7 +2228,7 @@ unsubLiveSession = fb.onSnapshot(fb.doc(fb.db, 'liveSessions', studentUid), asyn
     // --- IMAGE COMPRESSION ---
     // Resizes to a max dimension and re-encodes as JPEG so phone photos
     // (often several MB) shrink to well under our per-lesson budget.
-    function compressImage(file, maxDim = 800, quality = 0.7) {
+    function compressImage(file, maxDim = 350, quality = 0.5) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
