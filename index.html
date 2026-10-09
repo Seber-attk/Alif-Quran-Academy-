@@ -764,6 +764,20 @@
   body.dark-mode .q-admin-item span {
     color: var(--text) !important;
   }
+
+  /* Quiz/lesson letter card: was a bright cream box regardless of theme */
+  body.dark-mode .big-symbol-box {
+    background: linear-gradient(160deg, var(--card-bg), #151515) !important;
+    border-color: #665420 !important;
+  }
+
+  /* Correct/wrong answer flash: the pale green/red was too bright against the dark UI */
+  body.dark-mode .option-btn.correct {
+    background: #0F3D2E !important; border-color: #10B981 !important; color: #D1FAE5 !important;
+  }
+  body.dark-mode .option-btn.wrong {
+    background: #4A1515 !important; border-color: #EF4444 !important; color: #FECACA !important;
+  }
   
   /* Button Styling */
   .theme-toggle-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; opacity: 0.7; padding: 4px 6px; }
@@ -2968,8 +2982,47 @@ const MASCOT_IMAGES = { boy: {}, girl: {} };
       localStorage.setItem('soundEnabled', soundEnabled ? 'on' : 'off');
       document.getElementById('sound-toggle-btn').innerText = soundEnabled ? '🔊' : '🔇';
     }
-    function playCorrectSound() { if (soundEnabled) playTone([[523.25, 0.12], [659.25, 0.12], [783.99, 0.18]], 'sine'); }
-    function playWrongSound() { if (soundEnabled) playTone([[220, 0.18], [180, 0.22]], 'sawtooth'); }
+    // Like playTone, but each note can overlap the others (delay from the chime's start),
+    // so chords/harmonies are possible instead of one flat note after another.
+    function playChime(notes, type = 'sine') {
+      try {
+        const ctx = getAudioCtx();
+        const now = ctx.currentTime;
+        notes.forEach(([freq, dur, delay = 0, vol = 0.16]) => {
+          const t = now + delay;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0.0001, t);
+          gain.gain.exponentialRampToValueAtTime(vol, t + 0.015);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+          osc.connect(gain).connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + dur + 0.03);
+        });
+      } catch (e) { console.warn('Sound playback unavailable:', e); }
+    }
+    function playCorrectSound() {
+      if (!soundEnabled) return;
+      // Warm ascending arpeggio with a bright sparkle chord layered on top of the last note
+      playChime([
+        [523.25, 0.14, 0],
+        [659.25, 0.14, 0.09],
+        [783.99, 0.24, 0.18],
+        [1046.50, 0.28, 0.20, 0.09],
+        [1318.51, 0.28, 0.22, 0.07]
+      ], 'triangle');
+    }
+    function playWrongSound() {
+      if (!soundEnabled) return;
+      // Punchy double-buzz with a slightly dissonant drop, instead of one plain descending tone
+      playChime([
+        [196, 0.09, 0, 0.18],
+        [185, 0.09, 0.09, 0.18],
+        [146.83, 0.24, 0.18, 0.16]
+      ], 'square');
+    }
 
     // Creates a floating "+XP" badge right above the target button or header
     function spawnFloatingXp(amount, targetElement) {
