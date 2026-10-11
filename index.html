@@ -3020,21 +3020,21 @@ const MASCOT_IMAGES = { boy: {}, girl: {} };
         });
       } catch (e) { console.warn('Sound playback unavailable:', e); }
     }
+    // Real recorded clips (made with Suno) instead of synthesized tones.
+    // Preloaded once so there's no delay the first time a student answers.
+    const correctAudio = new Audio('sounds/correct.mp3');
+    const wrongAudio = new Audio('sounds/wrong.mp3');
+    correctAudio.preload = 'auto';
+    wrongAudio.preload = 'auto';
     function playCorrectSound() {
       if (!soundEnabled) return;
-      // A calm two-note confirmation tone (like a UI "done" chime), not a game jingle
-      playChime([
-        [523.25, 0.16, 0, 0.11],
-        [659.25, 0.22, 0.10, 0.11]
-      ], 'sine');
+      try { correctAudio.currentTime = 0; correctAudio.play().catch(() => {}); }
+      catch (e) { console.warn('Sound playback unavailable:', e); }
     }
     function playWrongSound() {
       if (!soundEnabled) return;
-      // A soft downward two-note dip — present enough to notice, but not a harsh buzzer
-      playChime([
-        [392.00, 0.13, 0, 0.15],
-        [329.63, 0.20, 0.09, 0.15]
-      ], 'triangle');
+      try { wrongAudio.currentTime = 0; wrongAudio.play().catch(() => {}); }
+      catch (e) { console.warn('Sound playback unavailable:', e); }
     }
 
     // Creates a floating "+XP" badge right above the target button or header
