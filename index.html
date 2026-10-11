@@ -3030,11 +3030,11 @@ const MASCOT_IMAGES = { boy: {}, girl: {} };
     }
     function playWrongSound() {
       if (!soundEnabled) return;
-      // A short, low, muted tone — understated rather than a buzzer
+      // A soft downward two-note dip — present enough to notice, but not a harsh buzzer
       playChime([
-        [220, 0.20, 0, 0.11],
-        [196, 0.22, 0.05, 0.08]
-      ], 'sine');
+        [392.00, 0.13, 0, 0.15],
+        [329.63, 0.20, 0.09, 0.15]
+      ], 'triangle');
     }
 
     // Creates a floating "+XP" badge right above the target button or header
