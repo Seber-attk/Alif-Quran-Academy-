@@ -219,7 +219,7 @@
     .quran-controls-divider { width: 1px; align-self: stretch; background: #e0dccb; margin: 0 4px; }
 
     .quran-page-nav { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
-    .quran-page { background:#fffdf5; border:1px solid #ecdfb8; border-radius:16px; padding:26px 20px; direction:rtl; text-align:right; word-spacing:-0.3em; font-family:var(--font-arabic); font-size:1.75rem; line-height:2.2; box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 10px 24px rgba(163,130,50,0.12), inset 0 0 0 6px #fffef9; }
+    .quran-page { background:#fffdf5; border:1px solid #ecdfb8; border-radius:16px; padding:26px 20px; direction:rtl; text-align:right; word-spacing:-0.12em; font-family:var(--font-arabic); font-size:1.75rem; line-height:2.1; box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 10px 24px rgba(163,130,50,0.12), inset 0 0 0 6px #fffef9; }
     .quran-word { display:inline; border-radius:6px; cursor:pointer; }
     .quran-word.point { background:#BBDEFB; }
     .quran-word.mistake { background:#FFCDD2; }
@@ -698,7 +698,7 @@
       vertical-align: middle;
     }
     /* Number is nudged up (-0.3em) because Amiri digits sit low; smaller for 2 and 3 digits */
-    .quran-ayah-end .n { position: relative; top: -0.08em; line-height: 1; }
+    .quran-ayah-end .n { position: relative; top: -0.3em; line-height: 1; }
     .quran-ayah-end.len2 { font-size: 0.88rem; }
     .quran-ayah-end.len3 { font-size: 0.7rem; }
   /* Core Dark Mode Colors */
@@ -763,6 +763,23 @@
   }
   body.dark-mode .q-admin-item span {
     color: var(--text) !important;
+  }
+
+  /* Lesson-complete screen: the bright tier-colored card and its boxes stayed light,
+     which is why the ውጤት / XP labels (light text by default) went invisible on them */
+  body.dark-mode .completion-card {
+    background: var(--card-bg) !important;
+  }
+  body.dark-mode .completion-card .stat-item {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border-color: #333 !important;
+  }
+  body.dark-mode .res-tile {
+    background: rgba(255, 255, 255, 0.07) !important;
+  }
+  body.dark-mode .res-msg {
+    background: rgba(27, 94, 58, 0.28) !important;
+    color: #8FD9A8 !important;
   }
 
   /* Quiz/lesson letter card: was a bright cream box regardless of theme */
@@ -3005,23 +3022,19 @@ const MASCOT_IMAGES = { boy: {}, girl: {} };
     }
     function playCorrectSound() {
       if (!soundEnabled) return;
-      // Warm ascending arpeggio with a bright sparkle chord layered on top of the last note
+      // A calm two-note confirmation tone (like a UI "done" chime), not a game jingle
       playChime([
-        [523.25, 0.14, 0],
-        [659.25, 0.14, 0.09],
-        [783.99, 0.24, 0.18],
-        [1046.50, 0.28, 0.20, 0.09],
-        [1318.51, 0.28, 0.22, 0.07]
-      ], 'triangle');
+        [523.25, 0.16, 0, 0.11],
+        [659.25, 0.22, 0.10, 0.11]
+      ], 'sine');
     }
     function playWrongSound() {
       if (!soundEnabled) return;
-      // Punchy double-buzz with a slightly dissonant drop, instead of one plain descending tone
+      // A short, low, muted tone — understated rather than a buzzer
       playChime([
-        [196, 0.09, 0, 0.18],
-        [185, 0.09, 0.09, 0.18],
-        [146.83, 0.24, 0.18, 0.16]
-      ], 'square');
+        [220, 0.20, 0, 0.11],
+        [196, 0.22, 0.05, 0.08]
+      ], 'sine');
     }
 
     // Creates a floating "+XP" badge right above the target button or header
