@@ -2700,7 +2700,16 @@ const MASCOT_IMAGES = { boy: {}, girl: {} };
       if (!lessonMeta) return;
 
       const fetchedQuestions = await fetchLessonQuestions(lessonId);
-      if (!fetchedQuestions || fetchedQuestions.length === 0) { alert("ይህ ትምህርት እስካሁን ጥያቄዎች የሉትም!"); return; }
+      if (!fetchedQuestions || fetchedQuestions.length === 0) {
+        // Custom toast instead of ugly browser alert
+        const toast = document.createElement('div');
+        toast.className = 'achievement-toast';
+        toast.innerHTML = `<div class="achievement-toast-icon">⚠️</div><div><strong>ባዶ ትምህርት</strong><div>ይህ ትምህርት እስካሁን ጥያቄዎች የሉትም!</div></div>`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.classList.add('out'), 3000);
+        setTimeout(() => toast.remove(), 3500);
+        return;
+      }
 
       if (lessonMeta.type === 'matching') {
         startMatchingGame(lessonMeta, fetchedQuestions);
