@@ -1236,11 +1236,14 @@
             <label>Schedule (shown to students as free text)</label>
             <input type="text" id="live-class-schedule" placeholder="e.g. Every Saturday, 4:00 PM">
           </div>
-          <div class="form-group">
-            <label>Google Meet Link</label>
-            <input type="text" id="live-class-link" placeholder="e.g. https://meet.google.com/xxx-xxxx-xxx">
-          </div>
           <button class="btn" onclick="saveLiveClassInfo()">Save Live Class Info</button>
+        </div>
+
+        <div class="admin-card">
+          <h3>💳 Payment Requests</h3>
+          <p style="font-size:0.85rem; color:#888; margin-top:0;">Check your bank app for the reference number first, then approve.</p>
+          <button class="btn btn-sm btn-outline" onclick="renderPaymentRequests()">↻ Refresh</button>
+          <div id="payment-requests-list" style="margin-top:12px;"></div>
         </div>
 
         <div class="admin-card">
@@ -1359,7 +1362,7 @@
     let isTeacher = false;
     let appData = { levels: [] };                 // structure only
     let lessonQuestionsCache = {};                 // lessonId -> questions[]
-    let userProgress = { xp: 0, completedLessons: [], checkpointScores: {}, adminNotified: false, allCompletedAt: null, streakDates: [], currentStreak: 0, longestStreak: 0, achievements: [], liveUnlocked: false, mastery: {} };
+    let userProgress = { xp: 0, completedLessons: [], checkpointScores: {}, adminNotified: false, allCompletedAt: null, streakDates: [], currentStreak: 0, longestStreak: 0, achievements: [], liveUnlocked: false, mastery: {}, hasPaidForLive: false, assignedTeacher: '', payment: null };
 
     let currentLesson = null;
     let copySourceMedia = null; // { img, audio } carried over when duplicating a question
@@ -1587,6 +1590,7 @@
           adminNotified: d.adminNotified || false, allCompletedAt: d.allCompletedAt || null,
           streakDates: d.streakDates || [], currentStreak: d.currentStreak || 0, longestStreak: d.longestStreak || 0,
           achievements: d.achievements || [], liveUnlocked: d.liveUnlocked || false, mastery: d.mastery || {},
+          hasPaidForLive: d.hasPaidForLive || false, assignedTeacher: d.assignedTeacher || '', payment: d.payment || null,
           gender: d.gender || getSavedGender(user.uid)
         };
         window.__progressLoaded = true;
@@ -1647,6 +1651,144 @@
       } catch (e) {
         alert('Could not assign teacher: ' + (e && e.message ? e.message : e));
       }
+    }
+
+    // --- LIVE CLASS PAYMENT (manual: student pays by bank transfer, admin verifies) ---
+    const PAYMENT_INFO = {
+      amount: 2000,
+      currency: 'ብር',
+      bankName: 'የኢትዮጵያ ንግድ ባንክ (CBE)',
+      accountNumber: '1000640830682',
+      accountName: ''   // put the account holder's name here so students can double-check who they pay
+    };
+
+    function escHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function showInfoToast(icon, title, text) {
+      const toast = document.createElement('div');
+      toast.className = 'achievement-toast';
+      toast.innerHTML = `<div class="achievement-toast-icon">${icon}</div><div><strong>${escHtml(title)}</strong><div>${escHtml(text)}</div></div>`;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.classList.add('out'), 3000);
+      setTimeout(() => toast.remove(), 3500);
+    }
+
+    function showPaymentModal() {
+      if (!currentUser || document.getElementById('payment-modal')) return;
+      const p = PAYMENT_INFO;
+      const m = document.createElement('div'); m.className = 'modal-back'; m.id = 'payment-modal';
+      m.innerHTML = `<div class="modal-card" style="max-height:90vh; overflow-y:auto;">
+        <div style="font-size:2.5rem;">💎</div>
+        <h3 style="margin:6px 0;">የቀጥታ ክፍል ክፍያ</h3>
+        <div style="font-size:1.6rem; font-weight:800; color:var(--primary); margin-bottom:10px;">${p.amount.toLocaleString()} ${p.currency}</div>
+        <div style="background:rgba(128,128,128,0.12); border-radius:14px; padding:12px; margin-bottom:12px;">
+          <div style="font-size:0.8rem; opacity:0.75;">${escHtml(p.bankName)}</div>
+          ${p.accountName ? `<div style="font-weight:700; margin-top:2px;">${escHtml(p.accountName)}</div>` : ''}
+          <div id="pay-acct" style="font-size:1.3rem; font-weight:800; letter-spacing:1px; margin:6px 0; direction:ltr;">${escHtml(p.accountNumber)}</div>
+          <button class="btn btn-sm btn-outline" type="button" onclick="copyPaymentAccount(this)">📋 ቁጥሩን ቅዳ</button>
+        </div>
+        <ol style="text-align:left; font-size:0.85rem; line-height:1.6; padding-left:20px; margin:0 0 12px 0;">
+          <li>ከላይ ወዳለው አካውንት ${p.amount.toLocaleString()} ${p.currency} ያስገቡ።</li>
+          <li>ከደረሰኙ ላይ የክፍያ ማረጋገጫ ቁጥር (Reference / Transaction No.) ከታች ያስገቡ።</li>
+          <li>"ክፍያዬን አረጋግጡ" ይጫኑ። አስተዳዳሪው አረጋግጦ መምህር ይመድብልዎታል።</li>
+        </ol>
+        <input id="pay-ref" type="text" autocomplete="off" placeholder="የማረጋገጫ ቁጥር / Reference No. *" style="width:100%; padding:12px; border:2px solid #ddd; border-radius:10px; font-size:1rem; margin-bottom:8px; background:#fff; color:#2B2B28;">
+        <input id="pay-name" type="text" autocomplete="off" placeholder="የከፋይ ስም (አማራጭ) / Sender name" style="width:100%; padding:12px; border:2px solid #ddd; border-radius:10px; font-size:1rem; margin-bottom:6px; background:#fff; color:#2B2B28;">
+        <div id="pay-error" style="color:#E53935; font-size:0.8rem; min-height:1.1em; margin-bottom:6px;"></div>
+        <button id="pay-submit" class="btn" style="width:100%; margin-bottom:8px;" onclick="submitPaymentRequest()">ክፍያዬን አረጋግጡ</button>
+        <button class="btn btn-outline" style="width:100%;" onclick="closePaymentModal()">ተመለስ</button>
+      </div>`;
+      document.body.appendChild(m);
+    }
+
+    function closePaymentModal() { const m = document.getElementById('payment-modal'); if (m) m.remove(); }
+
+    async function copyPaymentAccount(btn) {
+      const num = PAYMENT_INFO.accountNumber;
+      try {
+        await navigator.clipboard.writeText(num);
+      } catch (e) {
+        const t = document.createElement('textarea'); t.value = num; document.body.appendChild(t); t.select();
+        try { document.execCommand('copy'); } catch (e2) {}
+        t.remove();
+      }
+      if (btn) { const old = btn.textContent; btn.textContent = '✅ ተቀድቷል'; setTimeout(() => { btn.textContent = old; }, 1500); }
+    }
+
+    async function submitPaymentRequest() {
+      if (!currentUser) return;
+      const ref = document.getElementById('pay-ref').value.trim();
+      const payerName = document.getElementById('pay-name').value.trim();
+      const err = document.getElementById('pay-error');
+      if (ref.length < 6) { err.textContent = 'እባክዎ ትክክለኛ የማረጋገጫ ቁጥር ያስገቡ (ቢያንስ 6 ፊደል/ቁጥር)።'; return; }
+      const btn = document.getElementById('pay-submit');
+      btn.disabled = true; btn.textContent = '...';
+      const payment = { status: 'pending', ref: ref.slice(0, 60), payerName: payerName.slice(0, 60), amount: PAYMENT_INFO.amount, submittedAt: Date.now() };
+      try {
+        // mergeFields replaces the whole payment object, so an old rejection reason is cleared
+        await fb.setDoc(fb.doc(fb.db, 'users', currentUser.uid), { payment }, { mergeFields: ['payment'] });
+        closePaymentModal();
+        showInfoToast('⏳', 'ተልኳል', 'አስተዳዳሪው ክፍያዎን እስኪያረጋግጥ ይጠብቁ።');
+      } catch (e) {
+        console.error('Payment submit failed:', e);
+        btn.disabled = false; btn.textContent = 'ክፍያዬን አረጋግጡ';
+        err.textContent = 'መላክ አልተቻለም። ኢንተርኔትዎን ያረጋግጡ እና እንደገና ይሞክሩ።';
+      }
+    }
+
+    async function renderPaymentRequests() {
+      const container = document.getElementById('payment-requests-list');
+      if (!container) return;
+      container.innerHTML = '<p style="color:#999; font-size:0.85rem;">Loading…</p>';
+      try {
+        const snap = await fb.getDocs(fb.collection(fb.db, 'users'));
+        const pending = [];
+        snap.forEach(d => { const data = d.data(); if (data.payment && data.payment.status === 'pending') pending.push({ uid: d.id, ...data }); });
+        pending.sort((a, b) => (a.payment.submittedAt || 0) - (b.payment.submittedAt || 0));
+        if (pending.length === 0) { container.innerHTML = '<p style="color:#999; font-size:0.9rem;">No payments waiting for review.</p>'; return; }
+        container.innerHTML = pending.map(s => {
+          const when = s.payment.submittedAt ? new Date(s.payment.submittedAt).toLocaleString() : '';
+          return `<div class="q-admin-item" style="flex-wrap:wrap; gap:8px;">
+            <div style="flex:1 1 200px; min-width:0;">
+              <div style="font-weight:700; word-break:break-all;">${escHtml(s.email)}</div>
+              <div style="font-size:0.85rem;">Ref: <strong>${escHtml(s.payment.ref)}</strong>${s.payment.payerName ? ' · ' + escHtml(s.payment.payerName) : ''}</div>
+              <div style="color:#888; font-size:0.75rem;">${escHtml(String(s.payment.amount || ''))} ብር · ${escHtml(when)}</div>
+            </div>
+            <button class="btn btn-sm" onclick="approvePayment('${escHtml(s.uid)}')">✅ Approve</button>
+            <button class="btn btn-sm btn-danger-soft" onclick="rejectPayment('${escHtml(s.uid)}')">✖ Reject</button>
+          </div>`;
+        }).join('');
+      } catch (e) {
+        console.error('Failed to load payments:', e);
+        container.innerHTML = '<p style="color:#c62828; font-size:0.9rem;">Could not load payments — check the security rules let the admin read the users collection.</p>';
+      }
+    }
+
+    async function approvePayment(studentUid) {
+      if (!isAdmin) return;
+      if (!confirm('Confirm that this payment really arrived in the bank account?')) return;
+      try {
+        await fb.setDoc(fb.doc(fb.db, 'users', studentUid), {
+          hasPaidForLive: true,
+          payment: { status: 'approved', approvedAt: Date.now(), approvedBy: currentUser.email }
+        }, { merge: true });
+        showInfoToast('✅', 'Approved', 'Now assign a teacher to this student.');
+        renderPaymentRequests(); renderCompletedStudents();
+      } catch (e) { alert('Could not approve: ' + (e && e.message ? e.message : e)); }
+    }
+
+    async function rejectPayment(studentUid) {
+      if (!isAdmin) return;
+      const reason = prompt('Reason (the student will see this). Leave empty for none:');
+      if (reason === null) return;
+      try {
+        await fb.setDoc(fb.doc(fb.db, 'users', studentUid), {
+          payment: { status: 'rejected', rejectReason: reason.trim().slice(0, 120), rejectedAt: Date.now() }
+        }, { merge: true });
+        renderPaymentRequests();
+      } catch (e) { alert('Could not reject: ' + (e && e.message ? e.message : e)); }
     }
 
     async function teacherStartSession(studentUid, studentEmail) {
@@ -2143,8 +2285,7 @@ unsubLiveSession = fb.onSnapshot(fb.doc(fb.db, 'liveSessions', studentUid), asyn
 
     function saveLiveClassInfo() {
       const schedule = document.getElementById('live-class-schedule').value.trim();
-      const meetLink = document.getElementById('live-class-link').value.trim();
-      appData.liveClass = { schedule, meetLink };
+      appData.liveClass = { schedule };
       saveIndex();
       alert('Saved!');
     }
@@ -2159,7 +2300,8 @@ unsubLiveSession = fb.onSnapshot(fb.doc(fb.db, 'liveSessions', studentUid), asyn
         snap.forEach(d => {
           const data = d.data();
           data.uid = d.id;
-          if (data.adminNotified) finished.push(data);
+          // finished everything OR paid for live class (students who passed the placement test never get adminNotified)
+          if (data.adminNotified || data.hasPaidForLive) finished.push(data);
         });
         finished.sort((a, b) => new Date(b.allCompletedAt || 0) - new Date(a.allCompletedAt || 0));
 
@@ -2652,14 +2794,54 @@ const MASCOT_IMAGES = { boy: {}, girl: {} };
       const liveWrap = document.getElementById('home-live-class-wrap');
       liveWrap.innerHTML = '';
       const allCleared = stats.totalLessons > 0 && stats.clearedCount === stats.totalLessons;
-      if ((allCleared || userProgress.liveUnlocked) && appData.liveClass && appData.liveClass.meetLink) {
-        liveWrap.innerHTML = `
-          <div class="live-class-card">
-            <div style="font-size:2.5rem;">🕌</div>
-            <h3>የቁርኣን ቀጥታ ትምህርት ተከፍቷል!</h3>
-            <p>${appData.liveClass.schedule ? appData.liveClass.schedule : ''}</p>
-            <button class="btn" onclick="window.open('${appData.liveClass.meetLink}', '_blank')">ክፍል ይቀላቀሉ</button>
-          </div>`;
+      const isReadyForLive = allCleared || userProgress.liveUnlocked;
+
+      // Live class gate: unlocked -> pay -> admin confirms -> teacher assigned
+      if (isReadyForLive) {
+        const pay = userProgress.payment || null;
+        const schedule = appData.liveClass && appData.liveClass.schedule ? `<p style="margin-bottom:6px;">🗓 ${escHtml(appData.liveClass.schedule)}</p>` : '';
+
+        if (!userProgress.hasPaidForLive) {
+          if (pay && pay.status === 'pending') {
+            // STEP 1b: payment sent, waiting for the admin to check it
+            liveWrap.innerHTML = `
+              <div class="live-class-card" style="background: linear-gradient(135deg, #1E1E1E, #2B2B28); border: 2px solid var(--gold);">
+                <div style="font-size:2.5rem;">⏳</div>
+                <h3 style="color: var(--gold); margin-bottom: 5px;">ክፍያዎ በመረጋገጥ ላይ ነው</h3>
+                <p style="font-size: 0.9rem; margin-bottom: 6px;">የላኩት የማረጋገጫ ቁጥር፦ <strong>${escHtml(pay.ref)}</strong></p>
+                <p style="font-size: 0.85rem; opacity:0.8; margin-bottom: 0;">አስተዳዳሪው ክፍያውን እንዳረጋገጠ እዚህ ያያሉ።</p>
+              </div>`;
+          } else {
+            // STEP 1: THE GATEKEEPER (not paid yet, or last payment was rejected)
+            const rejected = pay && pay.status === 'rejected';
+            liveWrap.innerHTML = `
+              <div class="live-class-card" style="background: linear-gradient(135deg, #1E1E1E, #2B2B28); border: 2px solid var(--gold);">
+                <div style="font-size:2.5rem;">${rejected ? '⚠️' : '💎'}</div>
+                <h3 style="color: var(--gold); margin-bottom: 5px;">${rejected ? 'ክፍያዎ አልተረጋገጠም' : 'ፕሪሚየም የቀጥታ ክፍል'}</h3>
+                <p style="font-size: 0.9rem; margin-bottom: 15px;">${rejected
+                  ? (pay.rejectReason ? escHtml(pay.rejectReason) + ' — ' : '') + 'እባክዎ የማረጋገጫ ቁጥሩን አስተካክለው እንደገና ይላኩ።'
+                  : 'መምህር እንዲመደብልዎ እና የቁርኣን ትምህርት ለመጀመር ክፍያ ይፈጽሙ።'}</p>
+                <button class="btn" onclick="showPaymentModal()" style="background: var(--gold); color: #1E1E1E;">${rejected ? 'እንደገና ላክ' : 'ክፍያ ፈጽም / Pay Now'}</button>
+              </div>`;
+          }
+        } else if (!userProgress.assignedTeacher) {
+          // STEP 2: PAID, BUT WAITING FOR ADMIN TO ASSIGN A TEACHER
+          liveWrap.innerHTML = `
+            <div class="live-class-card" style="background: var(--primary-dark);">
+              <div style="font-size:2.5rem;">✅</div>
+              <h3 style="margin-bottom: 5px;">ክፍያዎ ተረጋግጧል!</h3>
+              <p style="font-size: 0.9rem;">አስተዳዳሪው መምህር እስኪመድቡልዎ ድረስ እባክዎ ትንሽ ይጠብቁ።</p>
+            </div>`;
+        } else {
+          // STEP 3: FULL ACCESS (paid and a teacher is assigned)
+          liveWrap.innerHTML = `
+            <div class="live-class-card" style="background: var(--primary);">
+              <div style="font-size:2.5rem;">🕌</div>
+              <h3 style="margin-bottom: 5px;">መምህር ተመድቦልዎታል!</h3>
+              ${schedule}
+              <p style="font-size: 0.9rem;">መምህርዎ ክፍሉን ሲጀምሩ ከላይ "LIVE" የሚል ብልጭ ድርግም የሚል ምልክት ይመጣል።</p>
+            </div>`;
+        }
       }
     }
 
@@ -3396,8 +3578,8 @@ const MASCOT_IMAGES = { boy: {}, girl: {} };
 
       if (appData.liveClass) {
         document.getElementById('live-class-schedule').value = appData.liveClass.schedule || '';
-        document.getElementById('live-class-link').value = appData.liveClass.meetLink || '';
       }
+      renderPaymentRequests();
       renderCompletedStudents();
       renderAchievementsAdmin();
 
