@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Alif Quran Academy</title>
+  <title>Sira Quran Academy</title>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#4CAF50">
+  <meta name="theme-color" content="#1B5E3A">
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -839,11 +839,11 @@
 </head>
 <body>
 
-  <div id="loading-view" class="loading-msg">🇪🇹 Alif Quran Academy እየተጫነ ነው…</div>
+  <div id="loading-view" class="loading-msg">🇪🇹 Sira Quran Academy እየተጫነ ነው…</div>
 
   <div id="auth-view" class="auth-wrap" style="display:none;">
     <div class="auth-card">
-      <h1 style="color:var(--primary); margin-top:0;">🇪🇹 Alif Quran Academy</h1>
+      <h1 style="color:var(--primary); margin-top:0;">🇪🇹 Sira Quran Academy</h1>
       <div class="auth-tabs">
         <div id="tab-login" class="auth-tab active" onclick="switchAuthTab('login')">ግባ</div>
         <div id="tab-signup" class="auth-tab" onclick="switchAuthTab('signup')">ተመዝገብ</div>
@@ -869,7 +869,7 @@
 
   <div id="app-root" style="display:none;">
     <header>
-      <h1 onclick="showView('student-home')">Alif Quran Academy 🇪🇹</h1>
+      <h1 onclick="showView('student-home')">Sira Quran Academy 🇪🇹</h1>
       <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
         <div class="xp-badge" id="xp-badge">⚡ <span id="total-xp">0</span> XP</div>
         <button id="theme-toggle-btn" class="theme-toggle-btn" onclick="toggleTheme()" title="የገጽታ ቀለም">🌙</button>
@@ -1048,7 +1048,7 @@
         <!-- 1. Floating Pill Top Bar -->
         <div class="premium-top-bar">
           <button class="btn-icon sm btn-danger-soft" onclick="leaveLiveQuranView()" title="ውጣ">✖</button>
-          <div class="live-appname">Alif Quran Academy 🇪🇹</div>
+          <div class="live-appname">Sira Quran Academy 🇪🇹</div>
           <div style="display:flex; gap:8px; align-items:center;">
             <button class="btn-icon sm audio-btn-icon" onclick="toggleAudioCall()" title="ድምጽ">🎤</button>
             <button id="mute-btn" class="btn-icon sm" style="display:none;" onclick="toggleMute()" title="ድምጽ አጥፋ">🎙️</button>
@@ -1497,7 +1497,7 @@
 
     function contactSupport() {
       const userEmail = (currentUser && currentUser.email) || '';
-      const subject = encodeURIComponent('Alif Quran Academy – ድጋፍ');
+      const subject = encodeURIComponent('Sira Quran Academy – ድጋፍ');
       const body = encodeURIComponent(`ሰላም፣\n\nየሚከተለው እርዳታ እፈልጋለሁ፦\n\n\n---\nየገባሁበት መለያ: ${userEmail}`);
       window.location.href = `mailto:quranacademyalif@gmail.com?subject=${subject}&body=${body}`;
     }
@@ -2389,7 +2389,7 @@ unsubLiveSession = fb.onSnapshot(fb.doc(fb.db, 'liveSessions', studentUid), asyn
         const a = document.createElement('a');
         const dateStr = new Date().toISOString().slice(0, 10);
         a.href = url;
-        a.download = `alif-quran-academy-backup-${dateStr}.json`;
+        a.download = `sira-quran-academy-backup-${dateStr}.json`;
         a.click();
         URL.revokeObjectURL(url);
       } catch (e) {
@@ -3567,8 +3567,8 @@ const MASCOT_IMAGES = { boy: {}, girl: {} };
       try { localStorage.setItem('ll_reminder_last', todayStr()); } catch (e) {}
       const body = userProgress.currentStreak > 0 ? `🔥 የ${userProgress.currentStreak} ቀን ተከታታይነትዎን ያቆዩ — ዛሬ ይማሩ!` : 'ዛሬ ለመማር ጊዜው ነው! 📖';
       navigator.serviceWorker && navigator.serviceWorker.getRegistration().then(reg => {
-        if (reg) reg.showNotification('Alif Quran Academy', { body, icon: 'icon-192.png' }); else new Notification('Alif Quran Academy', { body });
-      }).catch(() => new Notification('Alif Quran Academy', { body }));
+        if (reg) reg.showNotification('Sira Quran Academy', { body, icon: 'icon-192.png' }); else new Notification('Sira Quran Academy', { body });
+      }).catch(() => new Notification('Sira Quran Academy', { body }));
     }
     setInterval(checkReminder, 30000);
 

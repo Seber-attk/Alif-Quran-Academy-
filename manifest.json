@@ -1,17 +1,21 @@
 {
-  "name": "Sira Quran Academy 🇪🇹",
-  "short_name": "Sira Quran 🇪🇹",
-  "description": "Learn Arabic letters and read the Quran, one lesson at a time.",
+  "name": "Sira Quran Academy",
+  "short_name": "Sira Quran",
+  "description": "ፊደላትን ይማሩ፣ ቁርኣንን ያንብቡ — Learn Arabic letters and read the Quran, one lesson at a time.",
   "id": "./index.html",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#F0F4F8",
-  "theme_color": "#4CAF50",
+  "lang": "am",
+  "dir": "ltr",
+  "background_color": "#FDFCF2",
+  "theme_color": "#1B5E3A",
   "categories": [
-    "education"
+    "education",
+    "books"
   ],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "icon-192.png",
